@@ -6,6 +6,7 @@
 
 - 需要至少 2 个公开数据集的论文实验。
 - 需要自动查找数据集下载方式、预处理数据、转换标签和划分数据集。
+- 需要在数据集预处理时生成格式化审计日志，记录解压、划分、标签转换、空标签和删除样本。
 - 需要查找并复现基线模型，自动下载公开权重。
 - 需要设计 3 个有依据、有逻辑、非简单堆叠的创新点。
 - 需要记录实验结果、消融分析、效率对比和失败创新点。
@@ -19,6 +20,7 @@
 - 所有模型实验的 `epochs` 和 `batch size` 必须一致。
 - `num_workers` 可以尽量调大，但不能超过本机 CPU、内存和磁盘吞吐能力。
 - 训练不能超过本机专用显存，不能依赖共享显存、CPU offload、disk offload 或 swap。
+- 数据集预处理不能静默修正或删除数据，所有异常标签、空标签、删除样本和保留样本都必须记录。
 - 所有论文结果必须能追溯到日志、配置、检查点或结果文件。
 
 ## 推荐工作区结构
@@ -46,6 +48,26 @@ paper/
   en/
   shared/
 ```
+
+## 预处理审计日志
+
+预处理阶段必须在 `datasets/manifests/` 和 `experiments/reports/` 下生成可追溯记录：
+
+```text
+datasets/manifests/<dataset_name>_archive_manifest.csv
+datasets/manifests/<dataset_name>_preprocess_log.jsonl
+datasets/manifests/<dataset_name>_label_audit.csv
+datasets/manifests/<dataset_name>_split_manifest.csv
+experiments/reports/preprocess_report.md
+```
+
+必须记录的情况包括：
+
+- 数据集是单个压缩包或嵌套压缩包时的解压路径、文件数量、失败文件和校验信息。
+- 没有官方划分时，生成 train/val/test 的比例、随机种子和每个样本的 split。
+- 标签缺失、空标签、类别错误、标注行格式错误、越界框、无效框、图片和标签不匹配。
+- 预处理时自动删除、保留或修正的任何样本和标签，以及对应原因。
+- 最终保留样本数、删除样本数、空标签样本数、修正标签数和未解决警告。
 
 ## 安装到 Codex
 
@@ -83,4 +105,3 @@ git pull
 
 - `SKILL.md`: skill 主体规则和完整执行流程。
 - `agents/openai.yaml`: Codex UI 识别用的展示元数据。
-

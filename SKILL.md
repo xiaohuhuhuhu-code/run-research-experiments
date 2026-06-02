@@ -1,6 +1,6 @@
 ---
 name: run-research-experiments
-description: Use when an AI coding/research agent needs to run an end-to-end deep learning paper experiment involving public dataset discovery/download, dataset preprocessing, label conversion, train/val/test splits, baseline model selection, pretrained weight download, model innovation, ablation experiments, failed-improvement iteration, experiment logging, Chinese manuscript drafting, English manuscript drafting, terminology consistency, grammar polishing, and reproducible research artifacts.
+description: Use when an AI coding/research agent needs to run an end-to-end deep learning paper experiment involving public dataset discovery/download, dataset preprocessing, structured preprocessing audit logs, label conversion, train/val/test splits, baseline model selection, pretrained weight download, model innovation, ablation experiments, failed-improvement iteration, experiment logging, Chinese manuscript drafting, English manuscript drafting, terminology consistency, grammar polishing, and reproducible research artifacts.
 ---
 
 # Run Research Experiments
@@ -23,6 +23,7 @@ Default to a general deep learning workflow. If the task is computer vision, det
 - Treat `A`, `B`, and `C` as internal method improvements, not plug-in modules to stack or permute. Each step should refine the model, loss, training, representation, inference, or data-processing mechanism based on evidence from the previous step.
 - Treat local hardware as a hard constraint. Before training, detect or confirm GPU model, dedicated VRAM, CPU, RAM, and disk space. Do not exceed dedicated GPU memory, and do not rely on shared GPU memory, CPU offload, disk offload, or swap to make an experiment fit.
 - Keep `epochs` and `batch size` identical for all model experiments, including baseline, intermediate improved methods, final method, and external comparison baselines. If one method cannot fit the planned batch size, lower the common batch size for all methods.
+- Dataset preprocessing must produce structured audit logs. Archive extraction, generated splits, label conversion, invalid labels, empty labels, file deletion, file retention, and sample filtering must be recorded; never silently fix or drop data.
 - Prefer reproducible scripts, configs, manifests, and JSONL/CSV logs over manual notes.
 - Use fixed seeds, versioned dependencies, and consistent evaluation settings across baseline and improved models.
 
@@ -60,6 +61,10 @@ Maintain these records:
 
 - `experiments/reports/dataset_sources.md`: dataset name, task, official page, paper, license, download URL, access date, citation.
 - `experiments/reports/preprocess_report.md`: split policy, label mapping, ignored labels, image/video counts, class counts, integrity checks.
+- `datasets/manifests/<dataset_name>_archive_manifest.csv`: archive path, extraction target, extracted files, checksum if available, and extraction errors.
+- `datasets/manifests/<dataset_name>_preprocess_log.jsonl`: structured event log for extraction, split generation, label conversion, filtering, deletion, and retention.
+- `datasets/manifests/<dataset_name>_label_audit.csv`: invalid labels, empty labels, corrected labels, dropped labels, and reasons.
+- `datasets/manifests/<dataset_name>_split_manifest.csv`: sample id/path, split, split source, seed, and reason.
 - `experiments/reports/experiment_matrix.md`: baseline, improved method after A, improved method after A then B, final improved method after A then B then C, comparison methods, datasets, metrics, seeds, status.
 - `experiments/results/results.jsonl`: one line per run with command, config, git SHA, seed, hardware, metrics, checkpoint, log path.
 - `experiments/reports/innovation_audit.md`: accepted and rejected innovations with evidence.
@@ -85,15 +90,26 @@ Before preprocessing, create a dataset decision note explaining why the selected
 
 Download raw data into `datasets/raw/` and never modify it in place. Preprocess into `datasets/processed/`.
 
+Before preprocessing, create formatted logs under `datasets/manifests/`. Prefer JSONL for event logs and CSV for tabular manifests. Each preprocessing event log entry should include:
+
+```text
+timestamp | dataset | stage | source_path | target_path | sample_id | split | action | reason | before | after | status
+```
+
 For every dataset:
 
+- If the dataset is one archive or has nested archives, log extraction paths, extracted file counts, failed files, and checksums when available.
 - Verify archive checksums or at least file counts after extraction.
 - Convert labels to the training framework format, keeping a source-to-target class map.
+- Validate every label file and record missing labels, empty labels, invalid class ids, malformed rows, invalid boxes/masks/keypoints, out-of-bounds coordinates, duplicate annotations, unreadable images, and image-label mismatches.
+- Never silently delete samples or labels. If preprocessing drops a file, drops a label, keeps an empty-label sample, or removes an empty-label sample because the framework cannot use it, write a log entry with the exact reason.
 - Preserve ignored/difficult/crowd labels according to the benchmark protocol.
 - Split data into train/val/test using the official split when available. If no official split exists, create a deterministic split with a fixed seed and document the ratio.
+- For datasets with no direct split, write `datasets/manifests/<dataset_name>_split_manifest.csv` so every sample's generated split can be audited and reproduced.
 - Check for leakage, especially duplicate frames, near-duplicate videos, shared sequences, or same-scene images across train/test.
 - Produce a small visual sanity check: sample images with labels overlaid, class distribution, object-size distribution when relevant.
 - Write dataset config files used by training, such as YAML/JSON paths and class names.
+- Summarize preprocessing actions in `experiments/reports/preprocess_report.md`, including total samples kept, labels kept, empty-label samples, corrected labels, dropped samples, dropped labels, and unresolved warnings.
 
 Do not start model training until preprocessing has a written report in `experiments/reports/` and basic visual/label checks pass.
 
@@ -288,6 +304,7 @@ Do not report the work as complete until these are true:
 - At least two public datasets are selected, sourced, downloaded where permitted, and documented.
 - Datasets, model code, experiment outputs, and paper drafts are stored in their required folders.
 - Preprocessing is complete, deterministic, and visually sanity-checked.
+- Structured preprocessing logs exist for archive extraction, split generation, label validation, label conversion, empty labels, dropped/kept samples, and unresolved warnings.
 - Hardware budget is documented, and no accepted run relies on shared GPU memory or memory offload.
 - Epoch count and batch size are identical across all accepted model experiments; any batch-size reduction was applied to every compared method.
 - `num_workers` is tuned within the local hardware budget and recorded for each run.
