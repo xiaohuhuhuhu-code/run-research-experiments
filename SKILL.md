@@ -1,6 +1,6 @@
 ---
 name: run-research-experiments
-description: Use when an AI coding/research agent needs to run an end-to-end deep learning paper experiment involving public dataset discovery/download, dataset preprocessing, structured preprocessing audit logs, label conversion, train/val/test splits, baseline model selection, pretrained weight download, model innovation, ablation experiments, failed-improvement iteration, experiment logging, Chinese manuscript drafting, English manuscript drafting, terminology consistency, grammar polishing, and reproducible research artifacts.
+description: Use when an AI coding/research agent needs to run an end-to-end deep learning paper experiment involving public dataset discovery/download, dataset preprocessing, structured preprocessing audit logs, resumable work plans, anti-loop safeguards, label conversion, train/val/test splits, baseline model selection, pretrained weight download, model innovation, ablation experiments, failed-improvement iteration, experiment logging, Chinese manuscript drafting, English manuscript drafting, terminology consistency, grammar polishing, and reproducible research artifacts.
 ---
 
 # Run Research Experiments
@@ -24,6 +24,8 @@ Default to a general deep learning workflow. If the task is computer vision, det
 - Treat local hardware as a hard constraint. Before training, detect or confirm GPU model, dedicated VRAM, CPU, RAM, and disk space. Do not exceed dedicated GPU memory, and do not rely on shared GPU memory, CPU offload, disk offload, or swap to make an experiment fit.
 - Keep `epochs` and `batch size` identical for all model experiments, including baseline, intermediate improved methods, final method, and external comparison baselines. If one method cannot fit the planned batch size, lower the common batch size for all methods.
 - Dataset preprocessing must produce structured audit logs. Archive extraction, generated splits, label conversion, invalid labels, empty labels, file deletion, file retention, and sample filtering must be recorded; never silently fix or drop data.
+- Every substantial task must have a written plan, progress log, and resume checkpoint so another terminal or agent can continue without starting over.
+- Use explicit search/retry budgets to prevent dead loops. If a dataset, model, paper, download, or bug fix cannot be found or solved within the budget, stop, log the blocker, and present alternatives.
 - Prefer reproducible scripts, configs, manifests, and JSONL/CSV logs over manual notes.
 - Use fixed seeds, versioned dependencies, and consistent evaluation settings across baseline and improved models.
 
@@ -49,6 +51,7 @@ experiments/
   checkpoints/
   figures/
   reports/
+  state/
 paper/
   zh/
   en/
@@ -61,6 +64,11 @@ Maintain these records:
 
 - `experiments/reports/dataset_sources.md`: dataset name, task, official page, paper, license, download URL, access date, citation.
 - `experiments/reports/preprocess_report.md`: split policy, label mapping, ignored labels, image/video counts, class counts, integrity checks.
+- `experiments/state/work_plan.md`: phase plan, task status, assumptions, decisions, and next actions.
+- `experiments/state/resume_state.md`: latest checkpoint for restarting after interruption or switching terminals.
+- `experiments/logs/work_journal.jsonl`: structured log of actions, commands, artifacts, results, and next steps.
+- `experiments/logs/search_attempts.jsonl`: structured log of searches, download attempts, failures, and fallback decisions.
+- `experiments/reports/blockers.md`: unresolved blockers, exhausted retry budgets, user actions needed, and safe alternatives.
 - `datasets/manifests/<dataset_name>_archive_manifest.csv`: archive path, extraction target, extracted files, checksum if available, and extraction errors.
 - `datasets/manifests/<dataset_name>_preprocess_log.jsonl`: structured event log for extraction, split generation, label conversion, filtering, deletion, and retention.
 - `datasets/manifests/<dataset_name>_label_audit.csv`: invalid labels, empty labels, corrected labels, dropped labels, and reasons.
@@ -73,6 +81,41 @@ Maintain these records:
 - `paper/shared/terminology.md`: Chinese term, English term, abbreviation, first-use rule.
 - `paper/zh/`: Chinese outline, manuscript draft, tables, figure captions, and revision notes.
 - `paper/en/`: English outline, manuscript draft, tables, figure captions, and revision notes.
+
+## Planning, Resume, And Loop Guards
+
+Before substantial work, create or update `experiments/state/work_plan.md`.
+
+The plan must include:
+
+- Objective and current phase.
+- Assumptions and constraints.
+- Task list with statuses: `pending`, `in_progress`, `done`, `blocked`, or `rejected`.
+- Expected artifacts and their paths.
+- Current search/retry budgets.
+- Next concrete action.
+
+During work, append to `experiments/logs/work_journal.jsonl` after each meaningful action, command, file change, download, preprocessing step, training run, evaluation, or writing pass. Each entry should include:
+
+```text
+timestamp | phase | action | command_or_source | input | output | artifact_paths | status | next_step
+```
+
+Update `experiments/state/resume_state.md` after each phase, before any long-running download/training/evaluation, after any failure, and before ending a session. It must contain the current goal, completed work, active files, last successful command, running or pending commands, blockers, and the exact next action.
+
+When resuming after an interruption or switching terminals:
+
+1. Read `experiments/state/resume_state.md`, `experiments/state/work_plan.md`, `experiments/logs/work_journal.jsonl`, `experiments/results/results.jsonl`, and relevant reports before acting.
+2. Continue from the next incomplete task instead of repeating completed downloads, preprocessing, training, or writing.
+3. Verify existing artifacts before reusing them. If an artifact is missing or corrupt, log the reason before regenerating it.
+
+Anti-loop rules:
+
+- Set a budget before open-ended search or debugging. Default: at most 5 focused search queries/pages per missing dataset/model/paper, 3 download attempts per source, 3 retries for the same preprocessing error, and 3 retries for the same training/evaluation failure.
+- Log every attempt in `experiments/logs/search_attempts.jsonl` or `experiments/logs/work_journal.jsonl`.
+- If the budget is exhausted, stop that loop, write the issue to `experiments/reports/blockers.md`, summarize what was tried, and propose safe alternatives such as another dataset, another baseline, a smaller model, a different mirror, or a request for user-provided access.
+- Do not keep changing keywords, mirrors, parameters, or code indefinitely without a new hypothesis.
+- Prefer a documented blocker over unbounded searching that wastes time and compute.
 
 ## Phase 1: Dataset Discovery
 
@@ -301,6 +344,8 @@ English writing rules:
 
 Do not report the work as complete until these are true:
 
+- `experiments/state/work_plan.md`, `experiments/state/resume_state.md`, and `experiments/logs/work_journal.jsonl` are current enough for another agent or terminal to continue.
+- Search/retry budgets were followed, and exhausted loops are documented in `experiments/reports/blockers.md`.
 - At least two public datasets are selected, sourced, downloaded where permitted, and documented.
 - Datasets, model code, experiment outputs, and paper drafts are stored in their required folders.
 - Preprocessing is complete, deterministic, and visually sanity-checked.
