@@ -11,6 +11,7 @@
 - 需要设计 3 个有依据、有逻辑、非简单堆叠的创新点。
 - 需要记录实验结果、消融分析、效率对比和失败创新点。
 - 需要所有 AI 工作都有计划、执行记录和恢复 checkpoint，防止中断后无法继续。
+- 需要每个实验项目新建独立 conda 环境，避免污染 `base` 或其它项目环境。
 - 需要先写中文初稿，再基于中文稿写英文初稿，并统一专业术语。
 
 ## 核心规则
@@ -24,6 +25,8 @@
 - 数据集预处理不能静默修正或删除数据，所有异常标签、空标签、删除样本和保留样本都必须记录。
 - 所有工作必须有计划、进度日志和恢复状态，换终端或中断后要能继续。
 - 搜索、下载、调试和修复必须有尝试次数上限，找不到时要记录阻塞和替代方案，不能死循环。
+- 每个项目必须新建专属 conda 环境，不能使用 `base`，不能复用其它项目环境。
+- conda 环境本体不放入项目，只保存 `environment.yml`、显式导出文件和环境报告。
 - 所有论文结果必须能追溯到日志、配置、检查点或结果文件。
 
 ## 推荐工作区结构
@@ -40,6 +43,7 @@ model_code/
   configs/
   scripts/
   weights/
+  environment/
 experiments/
   logs/
   results/
@@ -102,6 +106,32 @@ experiments/reports/blockers.md
 
 预算耗尽后必须停止该循环，写入 `blockers.md`，并给出可行替代方案。
 
+## Conda 环境隔离
+
+每个新实验项目都必须先创建独立 conda 环境，再安装依赖、下载模型代码、预处理数据或启动训练。
+
+推荐记录文件：
+
+```text
+model_code/environment/environment.yml
+model_code/environment/conda_explicit.txt
+experiments/reports/environment_report.md
+```
+
+必须记录的内容包括：
+
+- conda 环境名，例如 `rre_<project_slug>` 或 `rre_<project_slug>_<date>`。
+- 环境创建命令和激活命令。
+- Python、CUDA、cuDNN、PyTorch 或其它框架版本。
+- 依赖安装命令、依赖冲突和解决方式。
+- 所有训练、评估、预处理和论文生成命令都应在该环境内执行。
+
+禁止事项：
+
+- 不能使用 `base` 环境做项目实验。
+- 不能复用其它项目的 conda 环境。
+- 不能把真实 conda 环境目录提交到项目或 GitHub。
+
 ## 安装到 Codex
 
 ```powershell
@@ -131,7 +161,7 @@ git pull
 也可以根据具体研究方向补充任务：
 
 ```text
-使用 $run-research-experiments，研究方向是无人机小目标检测。我的显卡是 RTX 4090 24GB，不能使用共享显存，所有模型实验 epoch 和 batch size 必须一致。
+使用 $run-research-experiments，研究方向是无人机小目标检测。我的显卡是 RTX 4090 24GB，不能使用共享显存，所有模型实验 epoch 和 batch size 必须一致，并且每个项目必须新建独立 conda 环境。
 ```
 
 ## 文件说明

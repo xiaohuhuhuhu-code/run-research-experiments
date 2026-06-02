@@ -1,6 +1,6 @@
 ---
 name: run-research-experiments
-description: Use when an AI coding/research agent needs to run an end-to-end deep learning paper experiment involving public dataset discovery/download, dataset preprocessing, structured preprocessing audit logs, resumable work plans, anti-loop safeguards, label conversion, train/val/test splits, baseline model selection, pretrained weight download, model innovation, ablation experiments, failed-improvement iteration, experiment logging, Chinese manuscript drafting, English manuscript drafting, terminology consistency, grammar polishing, and reproducible research artifacts.
+description: Use when an AI coding/research agent needs to run an end-to-end deep learning paper experiment involving public dataset discovery/download, dataset preprocessing, structured preprocessing audit logs, resumable work plans, anti-loop safeguards, per-project conda isolation, label conversion, train/val/test splits, baseline model selection, pretrained weight download, model innovation, ablation experiments, failed-improvement iteration, experiment logging, Chinese manuscript drafting, English manuscript drafting, terminology consistency, grammar polishing, and reproducible research artifacts.
 ---
 
 # Run Research Experiments
@@ -26,6 +26,7 @@ Default to a general deep learning workflow. If the task is computer vision, det
 - Dataset preprocessing must produce structured audit logs. Archive extraction, generated splits, label conversion, invalid labels, empty labels, file deletion, file retention, and sample filtering must be recorded; never silently fix or drop data.
 - Every substantial task must have a written plan, progress log, and resume checkpoint so another terminal or agent can continue without starting over.
 - Use explicit search/retry budgets to prevent dead loops. If a dataset, model, paper, download, or bug fix cannot be found or solved within the budget, stop, log the blocker, and present alternatives.
+- Every project must use a newly created, project-specific conda environment. Do not install dependencies into `base`, do not reuse another project's environment, and do not mix package state across projects.
 - Prefer reproducible scripts, configs, manifests, and JSONL/CSV logs over manual notes.
 - Use fixed seeds, versioned dependencies, and consistent evaluation settings across baseline and improved models.
 
@@ -45,6 +46,7 @@ model_code/
   configs/
   scripts/
   weights/
+  environment/
 experiments/
   logs/
   results/
@@ -69,6 +71,9 @@ Maintain these records:
 - `experiments/logs/work_journal.jsonl`: structured log of actions, commands, artifacts, results, and next steps.
 - `experiments/logs/search_attempts.jsonl`: structured log of searches, download attempts, failures, and fallback decisions.
 - `experiments/reports/blockers.md`: unresolved blockers, exhausted retry budgets, user actions needed, and safe alternatives.
+- `model_code/environment/environment.yml`: reproducible conda environment specification.
+- `model_code/environment/conda_explicit.txt`: explicit package export when available for exact environment reconstruction.
+- `experiments/reports/environment_report.md`: conda environment name, creation commands, Python/CUDA/PyTorch versions, installed packages, and activation instructions.
 - `datasets/manifests/<dataset_name>_archive_manifest.csv`: archive path, extraction target, extracted files, checksum if available, and extraction errors.
 - `datasets/manifests/<dataset_name>_preprocess_log.jsonl`: structured event log for extraction, split generation, label conversion, filtering, deletion, and retention.
 - `datasets/manifests/<dataset_name>_label_audit.csv`: invalid labels, empty labels, corrected labels, dropped labels, and reasons.
@@ -116,6 +121,38 @@ Anti-loop rules:
 - If the budget is exhausted, stop that loop, write the issue to `experiments/reports/blockers.md`, summarize what was tried, and propose safe alternatives such as another dataset, another baseline, a smaller model, a different mirror, or a request for user-provided access.
 - Do not keep changing keywords, mirrors, parameters, or code indefinitely without a new hypothesis.
 - Prefer a documented blocker over unbounded searching that wastes time and compute.
+
+## Conda Environment Isolation
+
+Before installing dependencies, downloading model code that installs packages, preprocessing data, or running experiments, create a new conda environment for the project.
+
+Rules:
+
+- Use a project-specific name such as `rre_<project_slug>` or `rre_<project_slug>_<date>`.
+- Do not use `base` for project work.
+- Do not reuse another project's conda environment.
+- Do not install packages globally or into an unrelated shared environment.
+- Keep all training, evaluation, preprocessing, and paper-generation commands inside the project environment.
+- If a baseline repository recommends its own environment, merge the needed dependencies into the project environment unless isolation is impossible. If separate environments are unavoidable, document why and keep experiment comparisons reproducible.
+
+Record:
+
+- Environment creation command.
+- Python version.
+- CUDA/cuDNN/PyTorch or framework versions.
+- Package installation commands.
+- Any dependency conflicts and how they were resolved.
+- Activation command and expected environment name.
+
+Export:
+
+```text
+model_code/environment/environment.yml
+model_code/environment/conda_explicit.txt
+experiments/reports/environment_report.md
+```
+
+Do not commit or copy the actual conda environment directory into the project. Store only the environment specifications and reports.
 
 ## Phase 1: Dataset Discovery
 
@@ -346,6 +383,7 @@ Do not report the work as complete until these are true:
 
 - `experiments/state/work_plan.md`, `experiments/state/resume_state.md`, and `experiments/logs/work_journal.jsonl` are current enough for another agent or terminal to continue.
 - Search/retry budgets were followed, and exhausted loops are documented in `experiments/reports/blockers.md`.
+- A new project-specific conda environment was created, used for all project commands, documented, and exported.
 - At least two public datasets are selected, sourced, downloaded where permitted, and documented.
 - Datasets, model code, experiment outputs, and paper drafts are stored in their required folders.
 - Preprocessing is complete, deterministic, and visually sanity-checked.
