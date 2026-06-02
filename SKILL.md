@@ -1,0 +1,304 @@
+---
+name: run-research-experiments
+description: Use when an AI coding/research agent needs to run an end-to-end deep learning paper experiment involving public dataset discovery/download, dataset preprocessing, label conversion, train/val/test splits, baseline model selection, pretrained weight download, model innovation, ablation experiments, failed-improvement iteration, experiment logging, Chinese manuscript drafting, English manuscript drafting, terminology consistency, grammar polishing, and reproducible research artifacts.
+---
+
+# Run Research Experiments
+
+## Overview
+
+Use this skill to drive a complete research workflow from datasets to manuscript. The core rule is evidence first: every dataset, baseline, innovation, metric, and paper claim must be traceable to a source file, command, log, or measured result.
+
+Default to a general deep learning workflow. If the task is computer vision, detection, tracking, segmentation, action recognition, or UAV/drone research, specialize the dataset search, metrics, and baselines for that task.
+
+## Operating Rules
+
+- Use at least two public datasets unless the user explicitly narrows the task.
+- Search the web for current official dataset pages, papers, download links, licenses, and citation requirements. Do not invent download URLs.
+- Download datasets and pretrained models automatically when public access permits it. If access requires login, form approval, manual license acceptance, or a private token, stop and give the user the exact action needed.
+- Keep failed ideas in the experiment log under `experiments/`. Only promote effective innovations into the final method and paper narrative.
+- Never write paper results before the corresponding experiments exist. Do not fabricate tables, curves, ablations, or comparisons.
+- Every innovation must have a documented rationale: the baseline/dataset problem it targets, the evidence showing that problem exists, the hypothesis for improvement, and the experiment that verifies it.
+- Innovations `A`, `B`, and `C` must form a coherent research story. They should be logically connected, preferably progressive or complementary, rather than three unrelated tricks.
+- Treat `A`, `B`, and `C` as internal method improvements, not plug-in modules to stack or permute. Each step should refine the model, loss, training, representation, inference, or data-processing mechanism based on evidence from the previous step.
+- Treat local hardware as a hard constraint. Before training, detect or confirm GPU model, dedicated VRAM, CPU, RAM, and disk space. Do not exceed dedicated GPU memory, and do not rely on shared GPU memory, CPU offload, disk offload, or swap to make an experiment fit.
+- Keep `epochs` and `batch size` identical for all model experiments, including baseline, intermediate improved methods, final method, and external comparison baselines. If one method cannot fit the planned batch size, lower the common batch size for all methods.
+- Prefer reproducible scripts, configs, manifests, and JSONL/CSV logs over manual notes.
+- Use fixed seeds, versioned dependencies, and consistent evaluation settings across baseline and improved models.
+
+## Workspace Layout
+
+Create or reuse this structure when the repo has no stronger convention. Keep the four artifact groups separate: datasets, model code, experiment outputs, and paper drafts.
+
+```text
+datasets/
+  raw/<dataset_name>/
+  processed/<dataset_name>/
+  manifests/
+  scripts/
+model_code/
+  baselines/<baseline_name>/
+  proposed/
+  configs/
+  scripts/
+  weights/
+experiments/
+  logs/
+  results/
+  checkpoints/
+  figures/
+  reports/
+paper/
+  zh/
+  en/
+  shared/
+```
+
+Do not mix these categories. Dataset archives and processed labels stay under `datasets/`; source code, configs, and weights stay under `model_code/`; metrics, logs, checkpoints, plots, and ablation outputs stay under `experiments/`; manuscript files stay under `paper/`.
+
+Maintain these records:
+
+- `experiments/reports/dataset_sources.md`: dataset name, task, official page, paper, license, download URL, access date, citation.
+- `experiments/reports/preprocess_report.md`: split policy, label mapping, ignored labels, image/video counts, class counts, integrity checks.
+- `experiments/reports/experiment_matrix.md`: baseline, improved method after A, improved method after A then B, final improved method after A then B then C, comparison methods, datasets, metrics, seeds, status.
+- `experiments/results/results.jsonl`: one line per run with command, config, git SHA, seed, hardware, metrics, checkpoint, log path.
+- `experiments/reports/innovation_audit.md`: accepted and rejected innovations with evidence.
+- `experiments/reports/innovation_story.md`: problem evidence, A/B/C rationale, logical relationship, and paper narrative.
+- `experiments/reports/hardware_budget.md`: GPU/VRAM, CPU/RAM, disk, allowed batch/image/model settings, and memory safety margin.
+- `paper/shared/terminology.md`: Chinese term, English term, abbreviation, first-use rule.
+- `paper/zh/`: Chinese outline, manuscript draft, tables, figure captions, and revision notes.
+- `paper/en/`: English outline, manuscript draft, tables, figure captions, and revision notes.
+
+## Phase 1: Dataset Discovery
+
+For each candidate public dataset:
+
+1. Verify relevance to the target task, scene, sensor, label type, and evaluation protocol.
+2. Prefer official project pages, benchmark pages, paper repositories, institutional mirrors, Kaggle/Hugging Face pages with clear provenance, or publisher-linked repositories.
+3. Record license, citation, download size, annotation format, class definitions, train/val/test protocol, and any usage restrictions.
+4. Select at least two datasets with complementary value, such as main benchmark plus cross-domain validation, or easy/standard dataset plus difficult/small-object/low-light/occlusion dataset.
+5. If no suitable public dataset is fully downloadable, present the nearest valid alternatives and explain the access blocker.
+
+Before preprocessing, create a dataset decision note explaining why the selected datasets are suitable and how they support the paper's experimental claims.
+
+## Phase 2: Download And Preprocess
+
+Download raw data into `datasets/raw/` and never modify it in place. Preprocess into `datasets/processed/`.
+
+For every dataset:
+
+- Verify archive checksums or at least file counts after extraction.
+- Convert labels to the training framework format, keeping a source-to-target class map.
+- Preserve ignored/difficult/crowd labels according to the benchmark protocol.
+- Split data into train/val/test using the official split when available. If no official split exists, create a deterministic split with a fixed seed and document the ratio.
+- Check for leakage, especially duplicate frames, near-duplicate videos, shared sequences, or same-scene images across train/test.
+- Produce a small visual sanity check: sample images with labels overlaid, class distribution, object-size distribution when relevant.
+- Write dataset config files used by training, such as YAML/JSON paths and class names.
+
+Do not start model training until preprocessing has a written report in `experiments/reports/` and basic visual/label checks pass.
+
+## Hardware Budget
+
+Before any training run, write `experiments/reports/hardware_budget.md`.
+
+Record:
+
+- GPU model and dedicated VRAM, such as RTX 4090 with 24 GB VRAM when that is the available card.
+- CPU model, system RAM, disk free space, CUDA/cuDNN/PyTorch or framework versions.
+- Maximum allowed image size, common batch size, common epoch count, workers, precision, gradient accumulation, and model scale.
+- A safety margin below dedicated VRAM. For a 24 GB card, target memory usage should stay below about 22 GB unless the user explicitly approves otherwise.
+
+Rules:
+
+- Do not enable shared GPU memory, CPU offload, disk offload, swap-based training, or model sharding that spills to system memory unless the user explicitly asks for it.
+- If a run risks exceeding dedicated VRAM, reduce batch size, input resolution, model size, number of workers, cache policy, or use mixed precision and gradient accumulation.
+- When reducing batch size for memory safety, update the shared experiment configuration and rerun/compare all affected methods with the same batch size.
+- Tune `num_workers` upward when possible to improve throughput, but keep it within CPU core count, RAM, disk bandwidth, and data-loader stability. Run a short data-loader smoke test before long training.
+- Run a short smoke test before long training to confirm memory usage, speed, and data loading behavior.
+- Monitor GPU memory during training. If training begins paging into shared memory or slows dramatically because VRAM is exceeded, stop the run, record the issue, and revise the configuration.
+- Prefer a smaller reproducible experiment over a larger run that depends on memory spillover and takes much longer.
+
+## Phase 3: Baseline Selection
+
+Search for baselines from the target task's recent literature and widely used open-source implementations.
+
+Baseline selection rules:
+
+- Include one primary baseline that is easy to reproduce and strong enough to be credible.
+- Include additional comparison baselines when feasible, especially classic, lightweight, real-time, or state-of-the-art families relevant to the paper.
+- Prefer official repositories, released pretrained weights, maintained packages, and models with published metrics on the selected datasets.
+- Record model version, repository URL, commit/tag, weight URL, license, expected input size, parameters, FLOPs, FPS/latency, and published metrics.
+- Download pretrained weights automatically when public. Keep weights under `model_code/weights/` and record their source.
+
+Reproduce the primary baseline before adding innovations. If reproduced metrics are far from published or expected values, debug data processing, evaluation protocol, image size, training schedule, and dependency versions before claiming a new method.
+
+## Phase 4: Innovation Design
+
+Define at least three candidate innovations, named `A`, `B`, and `C`. Each must have:
+
+- A source of evidence for the problem, such as baseline error analysis, literature gap, dataset statistics, qualitative failures, metric weakness, latency bottleneck, or deployment constraint.
+- A clear hypothesis tied to a known weakness of the baseline or dataset.
+- A minimal implementation plan.
+- A mechanism explanation describing why the change should address that weakness.
+- A statement of what internal part of the method is being changed, such as backbone representation, neck fusion, detection head, loss, assignment strategy, temporal modeling, augmentation policy, post-processing, or deployment path.
+- A dependency note explaining how it relates to the previous accepted method. `B` should improve a remaining limitation after `A`; `C` should improve a remaining limitation after the method has been improved by `A` then `B`.
+- Expected effect on accuracy, robustness, speed, parameters, FLOPs, or memory.
+- A risk note explaining how it could fail.
+- A measurable acceptance criterion.
+
+Good innovation categories include architecture modules, feature fusion, attention, loss functions, label assignment, data augmentation, temporal modeling, lightweight deployment changes, domain adaptation, post-processing, or training strategy. Avoid cosmetic changes that cannot be isolated experimentally.
+
+Do not design `A`, `B`, and `C` as independent modules that are merely stacked together. Do not create a full permutation matrix as the main experiment plan. The main method should read as an iterative mechanism improvement: baseline weakness -> A changes the method -> remaining weakness -> B changes the improved method -> remaining weakness -> C completes the method.
+
+Before implementing A/B/C, write `experiments/reports/innovation_story.md` with this structure:
+
+```text
+Observed problem:
+Evidence:
+Research hypothesis:
+A rationale:
+B rationale:
+C rationale:
+How A -> B -> C forms one coherent method:
+What internal mechanism changes at each step:
+Expected verification:
+Risks and fallback ideas:
+```
+
+The story must be understandable in the paper's introduction and method sections. If the three innovations cannot be explained as one coherent answer to the research problem, redesign them before running the full ablation.
+
+## Phase 5: Experiment Loop
+
+Run experiments in this required order:
+
+```text
+Baseline
+Improved method after A
+Improved method after A then B
+Final improved method after A then B then C
+```
+
+For each step:
+
+1. Train with the same data split, schedule, epoch count, batch size, image size, seed policy, and evaluation script unless the user explicitly approves a change.
+2. Evaluate on every selected dataset or use one dataset for screening and another for final validation if compute is limited.
+3. Record metrics, training curves, confusion/error analysis, qualitative examples, speed, parameters, FLOPs, and hardware.
+4. Compare against the immediately previous accepted model and the original baseline.
+5. Accept the innovation only if the primary metric improves meaningfully and trade-offs remain acceptable.
+6. After accepting each innovation, update `experiments/reports/innovation_story.md` so the rationale and measured evidence stay aligned.
+7. Keep every run within the documented hardware budget. Configuration changes made to fit VRAM must be applied consistently to baseline and improved methods.
+8. Record `epochs`, `batch size`, `num_workers`, precision, gradient accumulation, and measured throughput for each run. `num_workers` may be tuned for throughput, but `epochs` and `batch size` must remain fixed across model experiments.
+
+Use labels like `A`, `A then B`, and `A then B then C` only as shorthand in tables. In implementation and writing, describe what changed internally, not just which letters were added.
+
+Default acceptance guideline:
+
+- Detection/segmentation: primary metric improves by at least 0.3 to 0.5 percentage points, or improves a difficult subset while preserving the main metric.
+- Classification/action recognition: top metric improves by at least 0.5 percentage points, or improves robustness/generalization.
+- Real-time systems: accuracy may stay similar only if latency, model size, or FPS improves substantially.
+
+If an innovation does not improve:
+
+- Do not hide it. Log it as rejected or under revision.
+- Diagnose likely causes using loss curves, class-wise metrics, object-size metrics, qualitative errors, and overfitting/underfitting signals.
+- Revise the idea, replace it with a better candidate, and rerun the affected step.
+- Continue until there are three accepted innovations or until compute/data constraints make that impossible. If impossible, document the constraint and keep the strongest validated subset.
+
+## Phase 6: Ablation And Comparison
+
+After the final improved method is accepted, run final ablations:
+
+- Baseline
+- Improved method after A
+- Improved method after A then B
+- Final improved method after A then B then C
+- Targeted diagnostic checks only when needed to explain a mechanism interaction. Do not present arbitrary `A/B/C` permutations as the main paper story.
+- Comparison against selected external baselines under the same evaluation protocol.
+- Cross-dataset validation on at least two public datasets.
+- Efficiency comparison: parameters, FLOPs, FPS/latency, memory when relevant.
+
+Use the same metric names and decimal precision across all tables. Mark the best and second-best values only after verifying the numbers come from logs.
+
+## Phase 7: Reporting Results
+
+Produce these artifacts before writing the paper:
+
+- Main result table across datasets.
+- Ablation table for the mechanism steps: after A, after A then B, and final method after A then B then C.
+- Efficiency table.
+- Training/evaluation curves when useful.
+- Qualitative figure showing typical success and failure cases.
+- Error analysis grouped by class, object size, scene type, occlusion, lighting, or other task-relevant factors.
+- Reproducibility checklist with environment, commands, seeds, configs, checkpoints, and hardware.
+
+Every number in every paper table must link back to `experiments/results/results.jsonl`, a training log, evaluation output, or a generated report.
+
+## Phase 8: Chinese Manuscript Draft
+
+Write the Chinese draft first, grounded in measured results. Store Chinese outlines, drafts, tables, captions, and revision notes under `paper/zh/`.
+
+Recommended structure:
+
+- 标题
+- 摘要
+- 关键词
+- 引言
+- 相关工作
+- 方法
+- 实验设置
+- 实验结果与消融分析
+- 讨论
+- 结论
+- 参考文献占位或已核验引用
+
+Chinese writing rules:
+
+- Keep the problem, motivation, method, and experimental evidence aligned.
+- Explain A, B, and C as a coherent method, not three unrelated tricks.
+- For each innovation, state the targeted problem, supporting evidence, design motivation, and verified effect.
+- Explain what part of the method was internally changed at each step. Avoid language that makes A/B/C sound like simple module stacking or arbitrary combinations.
+- Present A/B/C in a smooth logical order, such as problem diagnosis -> feature/representation improvement -> optimization/training improvement -> final robust method.
+- Use precise claims: say where the method improves, on which dataset, under which metric.
+- Do not claim state-of-the-art unless the comparison table truly supports it.
+- Include limitations and failure cases when they affect interpretation.
+
+## Phase 9: English Manuscript Draft
+
+Translate and rewrite from the approved Chinese draft; do not independently invent new claims. Store English outlines, drafts, tables, captions, and revision notes under `paper/en/`.
+
+Before writing English, build `paper/shared/terminology.md`:
+
+```text
+中文术语 | English term | Abbreviation | First-use style | Notes
+```
+
+English writing rules:
+
+- Keep terminology, abbreviations, dataset names, model names, and metric names consistent.
+- Use standard academic phrasing for the target field.
+- Preserve the same logical order as the Chinese draft unless English readability requires local restructuring.
+- Check grammar, subject-verb agreement, article usage, tense, and parallel structure.
+- Use past tense for completed experiments and present tense for general truths or method descriptions.
+- Ensure every numerical claim matches the final verified tables.
+
+## Completion Checklist
+
+Do not report the work as complete until these are true:
+
+- At least two public datasets are selected, sourced, downloaded where permitted, and documented.
+- Datasets, model code, experiment outputs, and paper drafts are stored in their required folders.
+- Preprocessing is complete, deterministic, and visually sanity-checked.
+- Hardware budget is documented, and no accepted run relies on shared GPU memory or memory offload.
+- Epoch count and batch size are identical across all accepted model experiments; any batch-size reduction was applied to every compared method.
+- `num_workers` is tuned within the local hardware budget and recorded for each run.
+- The primary baseline is reproduced or the reproduction gap is explained and fixed as far as possible.
+- At least three innovations were attempted, with accepted/rejected status recorded.
+- Baseline, improved method after A, improved method after A then B, and final improved method experiments are logged.
+- Only validated improvements appear as final innovations.
+- Every final innovation has a documented problem, evidence, rationale, mechanism, and measured effect.
+- A/B/C are internal mechanism improvements with a dependency story, not independent modules that were simply stacked or permuted.
+- The final A/B/C method has a coherent story that can be explained in the introduction, method, and ablation sections.
+- Final results are traceable to logs/configs/checkpoints.
+- Chinese draft exists before English draft.
+- English terminology matches the Chinese draft and terminology table.
+- The final response names the key artifacts and any unresolved constraints.

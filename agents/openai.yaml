@@ -1,0 +1,4 @@
+interface:
+  display_name: "Run Research Experiments"
+  short_description: "End-to-end dataset, baseline, ablation, and paper workflow"
+  default_prompt: "Use $run-research-experiments to complete a deep learning paper experiment from public datasets through bilingual drafts."
