@@ -19,8 +19,9 @@ Default to a general deep learning workflow. If the task is computer vision, det
 - Keep failed ideas in the experiment log under `experiments/`. Only promote effective innovations into the final method and paper narrative.
 - Never write paper results before the corresponding experiments exist. Do not fabricate tables, curves, ablations, or comparisons.
 - Every innovation must have a documented rationale: the baseline/dataset problem it targets, the evidence showing that problem exists, the hypothesis for improvement, and the experiment that verifies it.
-- Innovations `A`, `B`, and `C` must form a coherent research story. They should be logically connected, preferably progressive or complementary, rather than three unrelated tricks.
-- Treat `A`, `B`, and `C` as internal method improvements, not plug-in modules to stack or permute. Each step should refine the model, loss, training, representation, inference, or data-processing mechanism based on evidence from the previous step.
+- Innovations `A`, `B`, and `C` must form a coherent research story. They can be progressive internal refinements, complementary modules, or a mix of both, but they must answer the same research problem rather than become unrelated tricks.
+- Module-based innovation is allowed. Modules may improve different parts of the system, such as backbone, neck, head, loss, assignment, augmentation, post-processing, or deployment path, but each module must have evidence, a clear interface, an expected effect, and measured validation.
+- Do not force all innovations into one direction if evidence shows diminishing returns. If one path stalls, broaden the candidate pool across different model components or training/inference stages.
 - Treat local hardware as a hard constraint. Before training, detect or confirm GPU model, dedicated VRAM, CPU, RAM, and disk space. Do not exceed dedicated GPU memory, and do not rely on shared GPU memory, CPU offload, disk offload, or swap to make an experiment fit.
 - Keep `epochs` and `batch size` identical for all model experiments, including baseline, intermediate improved methods, final method, and external comparison baselines. If one method cannot fit the planned batch size, lower the common batch size for all methods.
 - Dataset preprocessing must produce structured audit logs. Archive extraction, generated splits, label conversion, invalid labels, empty labels, file deletion, file retention, and sample filtering must be recorded; never silently fix or drop data.
@@ -236,15 +237,18 @@ Define at least three candidate innovations, named `A`, `B`, and `C`. Each must 
 - A clear hypothesis tied to a known weakness of the baseline or dataset.
 - A minimal implementation plan.
 - A mechanism explanation describing why the change should address that weakness.
-- A statement of what internal part of the method is being changed, such as backbone representation, neck fusion, detection head, loss, assignment strategy, temporal modeling, augmentation policy, post-processing, or deployment path.
-- A dependency note explaining how it relates to the previous accepted method. `B` should improve a remaining limitation after `A`; `C` should improve a remaining limitation after the method has been improved by `A` then `B`.
+- A statement of what internal part or module of the method is being changed, such as backbone representation, neck fusion, detection head, loss, assignment strategy, temporal modeling, augmentation policy, post-processing, or deployment path.
+- A relationship note explaining how it relates to the other accepted innovations. `B` and `C` may address remaining limitations after earlier steps, or they may be complementary modules that solve different evidence-backed weaknesses of the same baseline.
+- A module interface note when the innovation is modular: where it connects, what tensor/data flow it changes, what extra cost it adds, and what failure mode it is expected to fix.
 - Expected effect on accuracy, robustness, speed, parameters, FLOPs, or memory.
 - A risk note explaining how it could fail.
 - A measurable acceptance criterion.
 
 Good innovation categories include architecture modules, feature fusion, attention, loss functions, label assignment, data augmentation, temporal modeling, lightweight deployment changes, domain adaptation, post-processing, or training strategy. Avoid cosmetic changes that cannot be isolated experimentally.
 
-Do not design `A`, `B`, and `C` as independent modules that are merely stacked together. Do not create a full permutation matrix as the main experiment plan. The main method should read as an iterative mechanism improvement: baseline weakness -> A changes the method -> remaining weakness -> B changes the improved method -> remaining weakness -> C completes the method.
+Design `A`, `B`, and `C` with enough breadth to avoid getting stuck in one narrow direction. It is acceptable to build modules, replace modules, or combine modules when the evidence supports doing so. What is not acceptable is blind stacking: adding modules only because they sound useful, without a targeted problem, interface explanation, cost analysis, and validation.
+
+Before committing to final A/B/C, create a candidate pool across at least two different improvement directions when feasible, such as representation, fusion, loss/assignment, augmentation, temporal modeling, post-processing, or lightweight deployment. Run lightweight screening within the hardware and anti-loop budgets, then select the strongest validated and most coherent set.
 
 Before implementing A/B/C, write `experiments/reports/innovation_story.md` with this structure:
 
@@ -256,12 +260,13 @@ A rationale:
 B rationale:
 C rationale:
 How A -> B -> C forms one coherent method:
-What internal mechanism changes at each step:
+What mechanism or module changes at each step:
+Why the selected modules/refinements are complementary:
 Expected verification:
 Risks and fallback ideas:
 ```
 
-The story must be understandable in the paper's introduction and method sections. If the three innovations cannot be explained as one coherent answer to the research problem, redesign them before running the full ablation.
+The story must be understandable in the paper's introduction and method sections. If the three innovations cannot be explained as one coherent answer to the research problem, redesign them before running the full ablation. A coherent answer may be a progressive chain, a complementary module set, or a hybrid of both.
 
 ## Phase 5: Experiment Loop
 
@@ -285,7 +290,7 @@ For each step:
 7. Keep every run within the documented hardware budget. Configuration changes made to fit VRAM must be applied consistently to baseline and improved methods.
 8. Record `epochs`, `batch size`, `num_workers`, precision, gradient accumulation, and measured throughput for each run. `num_workers` may be tuned for throughput, but `epochs` and `batch size` must remain fixed across model experiments.
 
-Use labels like `A`, `A then B`, and `A then B then C` only as shorthand in tables. In implementation and writing, describe what changed internally, not just which letters were added.
+Use labels like `A`, `A then B`, and `A then B then C` only as shorthand in tables. In implementation and writing, describe the actual module or mechanism change, not just which letters were added.
 
 Default acceptance guideline:
 
@@ -308,7 +313,7 @@ After the final improved method is accepted, run final ablations:
 - Improved method after A
 - Improved method after A then B
 - Final improved method after A then B then C
-- Targeted diagnostic checks only when needed to explain a mechanism interaction. Do not present arbitrary `A/B/C` permutations as the main paper story.
+- Targeted diagnostic checks only when needed to explain a mechanism or module interaction. Do not present arbitrary `A/B/C` permutations as the main paper story, but do run targeted interaction checks when modules may help or interfere with each other.
 - Comparison against selected external baselines under the same evaluation protocol.
 - Cross-dataset validation on at least two public datasets.
 - Efficiency comparison: parameters, FLOPs, FPS/latency, memory when relevant.
@@ -352,8 +357,8 @@ Chinese writing rules:
 - Keep the problem, motivation, method, and experimental evidence aligned.
 - Explain A, B, and C as a coherent method, not three unrelated tricks.
 - For each innovation, state the targeted problem, supporting evidence, design motivation, and verified effect.
-- Explain what part of the method was internally changed at each step. Avoid language that makes A/B/C sound like simple module stacking or arbitrary combinations.
-- Present A/B/C in a smooth logical order, such as problem diagnosis -> feature/representation improvement -> optimization/training improvement -> final robust method.
+- Explain what part of the method was changed at each step, including module placement and data flow when a module is introduced.
+- Present A/B/C in a smooth logical order, such as problem diagnosis -> candidate module/mechanism screening -> selected complementary improvements -> final robust method.
 - Use precise claims: say where the method improves, on which dataset, under which metric.
 - Do not claim state-of-the-art unless the comparison table truly supports it.
 - Include limitations and failure cases when they affect interpretation.
@@ -396,8 +401,8 @@ Do not report the work as complete until these are true:
 - Baseline, improved method after A, improved method after A then B, and final improved method experiments are logged.
 - Only validated improvements appear as final innovations.
 - Every final innovation has a documented problem, evidence, rationale, mechanism, and measured effect.
-- A/B/C are internal mechanism improvements with a dependency story, not independent modules that were simply stacked or permuted.
-- The final A/B/C method has a coherent story that can be explained in the introduction, method, and ablation sections.
+- A/B/C are evidence-backed mechanism or module improvements with a coherent relationship, not arbitrary modules that were simply stacked or permuted.
+- The final A/B/C method has a coherent story that can be explained in the introduction, method, and ablation sections, whether the story is progressive, modular-complementary, or hybrid.
 - Final results are traceable to logs/configs/checkpoints.
 - Chinese draft exists before English draft.
 - English terminology matches the Chinese draft and terminology table.
