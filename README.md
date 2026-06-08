@@ -8,6 +8,7 @@
 - 需要自动查找数据集下载方式、预处理数据、转换标签和划分数据集。
 - 需要在数据集预处理时生成格式化审计日志，记录解压、划分、标签转换、空标签和删除样本。
 - 需要查找并复现基线模型，自动下载公开权重。
+- 需要先分析改进方向，再设计创新点，避免随意修改模型。
 - 需要设计 3 个有依据、有逻辑的创新点，既可以是机制递进，也可以是模块互补或二者混合。
 - 需要记录实验结果、消融分析、效率对比和失败创新点。
 - 需要所有 AI 工作都有计划、执行记录和恢复 checkpoint，防止中断后无法继续。
@@ -18,6 +19,7 @@
 
 - 数据集、模型代码、实验结果、论文稿必须分目录存放。
 - 创新点必须针对明确问题，且有证据、假设、机制解释和实验验证。
+- 做创新前必须分析和排序改进方向，用基线错误、数据集统计、文献缺口和硬件约束决定优先尝试什么。
 - A/B/C 可以搭模块，但每个模块都必须针对明确问题，有接口说明、成本分析和实验验证，不能盲目堆叠或做无意义排列组合。
 - 如果一个方向没有效果，AI 应该扩展候选池，尝试不同组件或阶段的改进，例如 backbone、neck、head、loss、augmentation、post-processing 或部署路径。
 - 所有模型实验的 `epochs` 和 `batch size` 必须一致。
@@ -107,6 +109,34 @@ experiments/reports/blockers.md
 
 预算耗尽后必须停止该循环，写入 `blockers.md`，并给出可行替代方案。
 
+## 改进方向分析
+
+在设计 A/B/C 创新点之前，必须先生成：
+
+```text
+experiments/reports/improvement_direction_analysis.md
+experiments/reports/candidate_screening.md
+```
+
+改进方向分析要比较不同方向，例如：
+
+- 数据增强或数据策略。
+- backbone/representation。
+- neck 或特征融合。
+- head。
+- loss 或 label assignment。
+- temporal modeling、tracking 或 post-processing。
+- 轻量化部署或推理优化。
+- domain adaptation 或鲁棒性。
+
+每个方向都要记录：
+
+```text
+direction | targeted problem | evidence | expected gain | novelty | implementation cost | hardware cost | risk | story fit | priority
+```
+
+原则是先试证据强、成本合理、最可能带来收益的方向。低证据方向即使看起来流行，也要先拒绝或延后。如果一个方向连续失败，AI 要更新分析并主动扩展候选池，避免在同一个方向反复微调。
+
 ## Conda 环境隔离
 
 每个新实验项目都必须先创建独立 conda 环境，再安装依赖、下载模型代码、预处理数据或启动训练。
@@ -156,7 +186,7 @@ git pull
 在 Codex 或 Claude Code 中显式触发：
 
 ```text
-使用 $run-research-experiments，帮我完成一个深度学习论文实验。要求至少找两个公开数据集，完成下载、预处理、基线复现、三个有依据的创新点实验，创新点可以是机制递进或模块互补，并最后写中文初稿和英文初稿。
+使用 $run-research-experiments，帮我完成一个深度学习论文实验。要求至少找两个公开数据集，完成下载、预处理、基线复现，先分析改进方向，再做三个有依据的创新点实验，创新点可以是机制递进或模块互补，并最后写中文初稿和英文初稿。
 ```
 
 也可以根据具体研究方向补充任务：

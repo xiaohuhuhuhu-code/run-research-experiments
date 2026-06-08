@@ -1,6 +1,6 @@
 ---
 name: run-research-experiments
-description: Use when an AI coding/research agent needs to run an end-to-end deep learning paper experiment involving public dataset discovery/download, dataset preprocessing, structured preprocessing audit logs, resumable work plans, anti-loop safeguards, per-project conda isolation, label conversion, train/val/test splits, baseline model selection, pretrained weight download, model innovation, ablation experiments, failed-improvement iteration, experiment logging, Chinese manuscript drafting, English manuscript drafting, terminology consistency, grammar polishing, and reproducible research artifacts.
+description: Use when an AI coding/research agent needs to run an end-to-end deep learning paper experiment involving public dataset discovery/download, dataset preprocessing, structured preprocessing audit logs, resumable work plans, anti-loop safeguards, per-project conda isolation, label conversion, train/val/test splits, baseline model selection, pretrained weight download, improvement direction analysis, model innovation, ablation experiments, failed-improvement iteration, experiment logging, Chinese manuscript drafting, English manuscript drafting, terminology consistency, grammar polishing, and reproducible research artifacts.
 ---
 
 # Run Research Experiments
@@ -22,6 +22,7 @@ Default to a general deep learning workflow. If the task is computer vision, det
 - Innovations `A`, `B`, and `C` must form a coherent research story. They can be progressive internal refinements, complementary modules, or a mix of both, but they must answer the same research problem rather than become unrelated tricks.
 - Module-based innovation is allowed. Modules may improve different parts of the system, such as backbone, neck, head, loss, assignment, augmentation, post-processing, or deployment path, but each module must have evidence, a clear interface, an expected effect, and measured validation.
 - Do not force all innovations into one direction if evidence shows diminishing returns. If one path stalls, broaden the candidate pool across different model components or training/inference stages.
+- Before implementing innovations, analyze and rank improvement directions from evidence. Do not change the model randomly; target the most likely failure sources first to find effective innovations faster.
 - Treat local hardware as a hard constraint. Before training, detect or confirm GPU model, dedicated VRAM, CPU, RAM, and disk space. Do not exceed dedicated GPU memory, and do not rely on shared GPU memory, CPU offload, disk offload, or swap to make an experiment fit.
 - Keep `epochs` and `batch size` identical for all model experiments, including baseline, intermediate improved methods, final method, and external comparison baselines. If one method cannot fit the planned batch size, lower the common batch size for all methods.
 - Dataset preprocessing must produce structured audit logs. Archive extraction, generated splits, label conversion, invalid labels, empty labels, file deletion, file retention, and sample filtering must be recorded; never silently fix or drop data.
@@ -81,6 +82,8 @@ Maintain these records:
 - `datasets/manifests/<dataset_name>_split_manifest.csv`: sample id/path, split, split source, seed, and reason.
 - `experiments/reports/experiment_matrix.md`: baseline, improved method after A, improved method after A then B, final improved method after A then B then C, comparison methods, datasets, metrics, seeds, status.
 - `experiments/results/results.jsonl`: one line per run with command, config, git SHA, seed, hardware, metrics, checkpoint, log path.
+- `experiments/reports/improvement_direction_analysis.md`: baseline weaknesses, evidence, candidate directions, scores, priorities, and selected improvement path.
+- `experiments/reports/candidate_screening.md`: lightweight screening plan and results for candidate modules/mechanisms before full experiments.
 - `experiments/reports/innovation_audit.md`: accepted and rejected innovations with evidence.
 - `experiments/reports/innovation_story.md`: problem evidence, A/B/C rationale, logical relationship, and paper narrative.
 - `experiments/reports/hardware_budget.md`: GPU/VRAM, CPU/RAM, disk, allowed batch/image/model settings, and memory safety margin.
@@ -229,7 +232,46 @@ Baseline selection rules:
 
 Reproduce the primary baseline before adding innovations. If reproduced metrics are far from published or expected values, debug data processing, evaluation protocol, image size, training schedule, and dependency versions before claiming a new method.
 
-## Phase 4: Innovation Design
+## Phase 4: Improvement Direction Analysis
+
+Before designing A/B/C, write `experiments/reports/improvement_direction_analysis.md`. The goal is to quickly identify the most promising innovation directions instead of randomly modifying the model.
+
+Use evidence from:
+
+- Baseline error analysis: class-wise metrics, object-size metrics, confusion cases, missed detections, false positives, temporal errors, or deployment bottlenecks.
+- Dataset statistics: class imbalance, target size distribution, scene conditions, occlusion, blur, illumination, domain gap, label noise, or empty-label prevalence.
+- Literature gaps: what recent papers improve, what they ignore, and which ideas are feasible on the selected datasets.
+- Hardware budget: whether the direction fits local VRAM, runtime, parameter, FLOP, and training-time constraints.
+- Paper story: whether the direction helps build a coherent method and convincing motivation.
+
+Score each candidate direction before implementation:
+
+```text
+direction | targeted problem | evidence | expected gain | novelty | implementation cost | hardware cost | risk | story fit | priority
+```
+
+Recommended directions to compare:
+
+- Data or augmentation strategy.
+- Backbone/representation.
+- Neck or feature fusion.
+- Detection/classification head.
+- Loss function or label assignment.
+- Temporal modeling or tracking/post-processing.
+- Lightweight deployment or inference optimization.
+- Domain adaptation or robustness.
+
+Rules:
+
+- Select candidates with strong evidence and reasonable cost first.
+- Prefer directions that can be tested with short screening runs before full training.
+- Reject or postpone low-evidence directions even if they sound fashionable.
+- If all top-ranked candidates fail, update the analysis and deliberately broaden the search space instead of repeatedly tweaking the same idea.
+- Write `experiments/reports/candidate_screening.md` with the screening plan, quick results, and decision for each candidate.
+
+Do not proceed to final A/B/C design until the improvement direction analysis identifies why those directions are likely to be effective.
+
+## Phase 5: Innovation Design
 
 Define at least three candidate innovations, named `A`, `B`, and `C`. Each must have:
 
@@ -268,7 +310,7 @@ Risks and fallback ideas:
 
 The story must be understandable in the paper's introduction and method sections. If the three innovations cannot be explained as one coherent answer to the research problem, redesign them before running the full ablation. A coherent answer may be a progressive chain, a complementary module set, or a hybrid of both.
 
-## Phase 5: Experiment Loop
+## Phase 6: Experiment Loop
 
 Run experiments in this required order:
 
@@ -305,7 +347,7 @@ If an innovation does not improve:
 - Revise the idea, replace it with a better candidate, and rerun the affected step.
 - Continue until there are three accepted innovations or until compute/data constraints make that impossible. If impossible, document the constraint and keep the strongest validated subset.
 
-## Phase 6: Ablation And Comparison
+## Phase 7: Ablation And Comparison
 
 After the final improved method is accepted, run final ablations:
 
@@ -320,7 +362,7 @@ After the final improved method is accepted, run final ablations:
 
 Use the same metric names and decimal precision across all tables. Mark the best and second-best values only after verifying the numbers come from logs.
 
-## Phase 7: Reporting Results
+## Phase 8: Reporting Results
 
 Produce these artifacts before writing the paper:
 
@@ -334,7 +376,7 @@ Produce these artifacts before writing the paper:
 
 Every number in every paper table must link back to `experiments/results/results.jsonl`, a training log, evaluation output, or a generated report.
 
-## Phase 8: Chinese Manuscript Draft
+## Phase 9: Chinese Manuscript Draft
 
 Write the Chinese draft first, grounded in measured results. Store Chinese outlines, drafts, tables, captions, and revision notes under `paper/zh/`.
 
@@ -363,7 +405,7 @@ Chinese writing rules:
 - Do not claim state-of-the-art unless the comparison table truly supports it.
 - Include limitations and failure cases when they affect interpretation.
 
-## Phase 9: English Manuscript Draft
+## Phase 10: English Manuscript Draft
 
 Translate and rewrite from the approved Chinese draft; do not independently invent new claims. Store English outlines, drafts, tables, captions, and revision notes under `paper/en/`.
 
@@ -397,6 +439,7 @@ Do not report the work as complete until these are true:
 - Epoch count and batch size are identical across all accepted model experiments; any batch-size reduction was applied to every compared method.
 - `num_workers` is tuned within the local hardware budget and recorded for each run.
 - The primary baseline is reproduced or the reproduction gap is explained and fixed as far as possible.
+- Improvement directions were analyzed, scored, screened when feasible, and documented before final innovation design.
 - At least three innovations were attempted, with accepted/rejected status recorded.
 - Baseline, improved method after A, improved method after A then B, and final improved method experiments are logged.
 - Only validated improvements appear as final innovations.
