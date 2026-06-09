@@ -11,6 +11,7 @@
 - 需要先分析改进方向，再设计创新点，避免随意修改模型。
 - 需要设计 3 个有依据、有逻辑的创新点，既可以是机制递进，也可以是模块互补或二者混合。
 - 需要记录实验结果、消融分析、效率对比和失败创新点。
+- 需要生成可复现实验结果图，包括训练/验证曲线、消融、效率、类别级、错误分析、数据集统计和定性结果。
 - 需要所有 AI 工作都有计划、执行记录和恢复 checkpoint，防止中断后无法继续。
 - 需要每个实验项目新建独立 conda 环境，避免污染 `base` 或其它项目环境。
 - 需要先写中文初稿，再基于中文稿写英文初稿，并统一专业术语。
@@ -30,6 +31,7 @@
 - 搜索、下载、调试和修复必须有尝试次数上限，找不到时要记录阻塞和替代方案，不能死循环。
 - 每个项目必须新建专属 conda 环境，不能使用 `base`，不能复用其它项目环境。
 - conda 环境本体不放入项目，只保存 `environment.yml`、显式导出文件和环境报告。
+- 实验结果图必须保存原始数据、绘图脚本、PDF/SVG 矢量图和 PNG 图，不能只靠颜色区分方法。
 - 所有论文结果必须能追溯到日志、配置、检查点或结果文件。
 
 ## 推荐工作区结构
@@ -52,6 +54,7 @@ experiments/
   results/
   checkpoints/
   figures/
+  figure_scripts/
   reports/
   state/
 paper/
@@ -136,6 +139,57 @@ direction | targeted problem | evidence | expected gain | novelty | implementati
 ```
 
 原则是先试证据强、成本合理、最可能带来收益的方向。低证据方向即使看起来流行，也要先拒绝或延后。如果一个方向连续失败，AI 要更新分析并主动扩展候选池，避免在同一个方向反复微调。
+
+## 实验结果作图要求
+
+这里主要约束实验结果图，不强制规定方法结构图、模块结构图或概念示意图。
+
+必须覆盖的实验结果图包括：
+
+- 训练/验证曲线：`train loss`、`val loss`、mAP、Precision、Recall、Accuracy、F1 等。
+- 消融实验图：Baseline、after A、after A then B、final method。
+- 效率对比图：Params、FLOPs、FPS、Latency、显存，或 mAP vs Params/FPS/Latency。
+- 类别级性能图：per-class AP、F1、Accuracy、Recall 等。
+- 错误分析图：混淆矩阵，或漏检、误检、定位错误、小目标错误、遮挡错误等。
+- 数据集统计图：类别分布、train/val/test 数量、目标尺寸分布、空标签统计等。
+- 定性结果图：GT、Baseline、Final method 对比，成功案例和失败案例都要有。
+
+验证曲线规则：
+
+```text
+x-axis: epoch
+y-axis: loss or metric
+curves: Baseline, after A, after A then B, final method
+source: training log / validation log / results.csv / TensorBoard / results.jsonl
+style: color + linestyle + marker
+preview PNG: dpi=300
+final PNG: dpi=600
+vector: PDF or SVG
+```
+
+统一样式要求：
+
+- 折线图不能只靠颜色区分，必须使用不同颜色、线型和 marker。
+- 柱状图不能只靠颜色区分，必要时使用 hatch 或不同边框样式。
+- 折线线宽 `2.0-2.5 pt`，主曲线建议 `2.5 pt`。
+- 坐标轴线宽 `1.2-1.5 pt`。
+- 网格线宽 `0.6-0.8 pt`，透明度 `0.25-0.35`。
+- marker 大小 `5-7 pt`。
+- 柱状图边框线宽 `1.0-1.2 pt`。
+- 字体大小建议：坐标轴标签 `11-12 pt`，刻度 `9-10 pt`，图例 `9-10 pt`。
+- 图例不能遮挡主体，必要时放在图外；黑白打印时仍应能区分不同方法。
+- epoch 很多时 marker 使用 `markevery=5` 或 `markevery=10`。
+
+保存要求：
+
+```text
+experiments/results/curves/
+experiments/results/tables/
+experiments/figure_scripts/
+experiments/figures/<plot_type>/
+```
+
+所有结果图必须能从原始日志、CSV、JSONL 或 TensorBoard 数据重新生成。
 
 ## Conda 环境隔离
 

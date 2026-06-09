@@ -1,6 +1,6 @@
 ---
 name: run-research-experiments
-description: Use when an AI coding/research agent needs to run an end-to-end deep learning paper experiment involving public dataset discovery/download, dataset preprocessing, structured preprocessing audit logs, resumable work plans, anti-loop safeguards, per-project conda isolation, label conversion, train/val/test splits, baseline model selection, pretrained weight download, improvement direction analysis, model innovation, ablation experiments, failed-improvement iteration, experiment logging, Chinese manuscript drafting, English manuscript drafting, terminology consistency, grammar polishing, and reproducible research artifacts.
+description: Use when an AI coding/research agent needs to run an end-to-end deep learning paper experiment involving public dataset discovery/download, dataset preprocessing, structured preprocessing audit logs, resumable work plans, anti-loop safeguards, per-project conda isolation, label conversion, train/val/test splits, baseline model selection, pretrained weight download, improvement direction analysis, model innovation, ablation experiments, publication-quality experimental result figures, failed-improvement iteration, experiment logging, Chinese manuscript drafting, English manuscript drafting, terminology consistency, grammar polishing, and reproducible research artifacts.
 ---
 
 # Run Research Experiments
@@ -29,6 +29,7 @@ Default to a general deep learning workflow. If the task is computer vision, det
 - Every substantial task must have a written plan, progress log, and resume checkpoint so another terminal or agent can continue without starting over.
 - Use explicit search/retry budgets to prevent dead loops. If a dataset, model, paper, download, or bug fix cannot be found or solved within the budget, stop, log the blocker, and present alternatives.
 - Every project must use a newly created, project-specific conda environment. Do not install dependencies into `base`, do not reuse another project's environment, and do not mix package state across projects.
+- Experimental result figures must be reproducible from logged data. Save the raw plot data, plotting script, vector export, and PNG export; do not create figures from hand-edited numbers.
 - Prefer reproducible scripts, configs, manifests, and JSONL/CSV logs over manual notes.
 - Use fixed seeds, versioned dependencies, and consistent evaluation settings across baseline and improved models.
 
@@ -54,6 +55,7 @@ experiments/
   results/
   checkpoints/
   figures/
+  figure_scripts/
   reports/
   state/
 paper/
@@ -87,6 +89,10 @@ Maintain these records:
 - `experiments/reports/innovation_audit.md`: accepted and rejected innovations with evidence.
 - `experiments/reports/innovation_story.md`: problem evidence, A/B/C rationale, logical relationship, and paper narrative.
 - `experiments/reports/hardware_budget.md`: GPU/VRAM, CPU/RAM, disk, allowed batch/image/model settings, and memory safety margin.
+- `experiments/results/curves/`: raw curve data used for training/validation plots.
+- `experiments/results/tables/`: raw tabular data used for ablation, efficiency, class-wise, error-analysis, and dataset-statistic plots.
+- `experiments/figure_scripts/`: plotting scripts that regenerate experimental result figures.
+- `experiments/figures/`: exported experimental result figures, grouped by plot type.
 - `paper/shared/terminology.md`: Chinese term, English term, abbreviation, first-use rule.
 - `paper/zh/`: Chinese outline, manuscript draft, tables, figure captions, and revision notes.
 - `paper/en/`: English outline, manuscript draft, tables, figure captions, and revision notes.
@@ -369,12 +375,72 @@ Produce these artifacts before writing the paper:
 - Main result table across datasets.
 - Ablation table for the mechanism steps: after A, after A then B, and final method after A then B then C.
 - Efficiency table.
-- Training/evaluation curves when useful.
-- Qualitative figure showing typical success and failure cases.
+- Training/validation curves.
+- Qualitative result figures showing typical success and failure cases.
+- Class-wise performance figures when labels/classes exist.
+- Dataset-statistic figures that support preprocessing, problem diagnosis, or improvement direction analysis.
 - Error analysis grouped by class, object size, scene type, occlusion, lighting, or other task-relevant factors.
 - Reproducibility checklist with environment, commands, seeds, configs, checkpoints, and hardware.
 
 Every number in every paper table must link back to `experiments/results/results.jsonl`, a training log, evaluation output, or a generated report.
+
+### Experimental Result Figure Requirements
+
+These requirements apply to experimental result figures only. Method architecture diagrams, module diagrams, conceptual illustrations, and model-flow figures may be designed separately according to the paper story.
+
+Required experimental result figures:
+
+- Training/validation curves: train loss, validation loss, and task metrics such as mAP50, mAP50-95, Precision, Recall, Accuracy, F1, IoU, or other task-specific metrics.
+- Ablation result figure: Baseline, improved method after A, improved method after A then B, and final method.
+- Efficiency comparison figure: parameters, FLOPs, FPS, latency, memory, or scatter plots such as metric vs Params, metric vs FPS, or metric vs Latency.
+- Class-wise performance figure: per-class AP, F1, Accuracy, Recall, or task-relevant class metric.
+- Error-analysis figure: confusion matrix for classification, or detection/segmentation error types such as missed detection, false positive, localization error, small-object error, occlusion error, or label-noise-related error.
+- Dataset-statistic figure: class distribution, train/val/test counts, target-size distribution, empty-label samples, or other preprocessing statistics.
+- Qualitative result figure: GT, baseline prediction, and final method prediction, including both success cases and failure cases.
+
+Training/validation curve rules:
+
+```text
+x-axis: epoch
+y-axis: loss or metric
+curves: Baseline, improved method after A, improved method after A then B, final method
+source: training log, validation log, results.csv, TensorBoard log, or experiments/results/results.jsonl
+style: color + linestyle + marker
+preview export: PNG at dpi=300
+final raster export: PNG at dpi=600
+vector export: PDF or SVG
+```
+
+- Curves in the same plot must use the same epoch count, batch size, data split, validation set, and evaluation script.
+- Do not compare curves from different training schedules unless the figure explicitly explains the difference and the user approved it.
+- If smoothing is used, state the smoothing window and preserve the raw curve data. Do not show only a smoothed curve without traceable raw data.
+- Mark best epoch or final epoch when useful, but do not crop the curve to only the favorable segment.
+- If multiple random seeds are used, plot the mean and use a shaded band for standard deviation.
+- For many epochs, use `markevery=5` or `markevery=10` so markers remain readable.
+
+Figure style rules:
+
+- Do not distinguish methods by color alone. Use color plus linestyle plus marker for lines, and color plus hatch or edge style for bars.
+- Suggested line styles: Baseline = solid + circle marker, after A = dashed + square marker, after A then B = dash-dot + triangle marker, final = dotted + diamond marker.
+- Line width: 2.0 to 2.5 pt. Use 2.5 pt for primary curves and 2.0 pt for auxiliary curves.
+- Axis spine width: 1.2 to 1.5 pt.
+- Grid width: 0.6 to 0.8 pt with alpha 0.25 to 0.35.
+- Marker size: 5 to 7 pt.
+- Bar edge line width: 1.0 to 1.2 pt.
+- Recommended font sizes: axis labels 11 to 12 pt, ticks 9 to 10 pt, legend 9 to 10 pt, subplot titles 11 to 12 pt.
+- Legends must use full method names or clear stage names, not only `A`, `B`, or `C`.
+- Legends must not cover the main data. Place them outside the axes or above the plot when needed.
+- Figures must remain interpretable in black-and-white printing.
+
+Export and reproducibility rules:
+
+- Save raw plot data under `experiments/results/curves/` or `experiments/results/tables/`.
+- Save plotting scripts under `experiments/figure_scripts/`.
+- Save exported figures under `experiments/figures/<plot_type>/`.
+- Export every paper-ready experimental result figure as PDF or SVG plus PNG.
+- Use `dpi=300` for preview PNG and `dpi=600` for final raster PNG.
+- Every figure must document data source, plotting script, export path, dpi, and format in the work journal or figure report.
+- Do not hide failed innovation curves or failed diagnostic plots; keep them in experiment records even if they are not used in the final paper.
 
 ## Phase 9: Chinese Manuscript Draft
 
