@@ -1,0 +1,29 @@
+runs:
+  - run_id: M0_dataset_seed0_full
+    method_version: M0
+    method_name: Baseline
+    operation_type: baseline
+    run_type: full
+    dataset: dataset_name
+    split: official_or_generated_split_name
+    seed: 0
+    seed_policy: fixed
+    config: model_code/configs/m0.yaml
+    command: ""
+    git_sha: ""
+    epochs: 100
+    batch_size: 16
+    input_size: 640
+    eval_script: model_code/scripts/evaluate.py
+    precision: amp
+    gradient_accumulation: 1
+    num_workers: 8
+    hardware: RTX_4090_24GB
+    status: pending
+    metrics: {}
+    artifacts:
+      log: experiments/logs/M0_dataset_seed0_full.log
+      checkpoint: experiments/checkpoints/M0_dataset_seed0_full.pt
+      result: experiments/results/results.jsonl
+    decision: pending
+    notes: ""

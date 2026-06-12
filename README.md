@@ -1,6 +1,6 @@
 # Run Research Experiments Skill
 
-这是一个通用的深度学习论文实验 skill，用于让 AI agent 从公开数据集、模型基线、机制递进或模块互补式创新点、实验记录，一直推进到中文论文初稿和英文论文初稿。
+这是一个通用的深度学习论文实验 skill，用于让 AI agent 从公开数据集、模型基线、`M0 -> M1 -> M2 -> M3` 机制版本创新、实验记录，一直推进到中文论文初稿和英文论文初稿。
 
 ## 适用场景
 
@@ -9,10 +9,13 @@
 - 需要在数据集预处理时生成格式化审计日志，记录解压、划分、标签转换、空标签和删除样本。
 - 需要查找并复现基线模型，自动下载公开权重。
 - 需要先分析改进方向，再设计创新点，避免随意修改模型。
-- 需要设计 3 个有依据、有逻辑的创新点，既可以是机制递进，也可以是模块互补或二者混合。
+- 需要设计 3 个有依据、有逻辑的有效创新版本：`M0` 为基线，`M1/M2/M3` 为经过筛选和验证的机制改进版本。
 - 需要记录实验结果、消融分析、效率对比和失败创新点。
 - 需要生成可复现实验结果图，包括训练/验证曲线、消融、效率、类别级、错误分析、数据集统计和定性结果。
 - 需要所有 AI 工作都有计划、执行记录和恢复 checkpoint，防止中断后无法继续。
+- 需要机器可读的项目状态和实验登记表，让换终端或换 AI 后可以继续。
+- 需要在写结果和论文前检查 epoch、batch size、数据划分、输入尺寸和评估脚本是否一致。
+- 需要每个论文主张都能追溯到实验结果、图表、日志、配置或引用。
 - 需要每个实验项目新建独立 conda 环境，避免污染 `base` 或其它项目环境。
 - 需要先写中文初稿，再基于中文稿写英文初稿，并统一专业术语。
 
@@ -21,17 +24,21 @@
 - 数据集、模型代码、实验结果、论文稿必须分目录存放。
 - 创新点必须针对明确问题，且有证据、假设、机制解释和实验验证。
 - 做创新前必须分析和排序改进方向，用基线错误、数据集统计、文献缺口和硬件约束决定优先尝试什么。
-- A/B/C 可以搭模块，但每个模块都必须针对明确问题，有接口说明、成本分析和实验验证，不能盲目堆叠或做无意义排列组合。
+- 不再把创新点理解成简单的 A/B/C 叠加。`M0` 是复现基线，`M1/M2/M3` 是逐步接受的机制版本，每一步都要说明是新增、替换、细化、删除还是重新参数化了哪个内部组件。
+- 纸面上的 A/B/C 只能作为简称使用，必须映射到具体的 `M1/M2/M3` 机制变化。
 - 如果一个方向没有效果，AI 应该扩展候选池，尝试不同组件或阶段的改进，例如 backbone、neck、head、loss、augmentation、post-processing 或部署路径。
 - 所有模型实验的 `epochs` 和 `batch size` 必须一致。
 - `num_workers` 可以尽量调大，但不能超过本机 CPU、内存和磁盘吞吐能力。
 - 训练不能超过本机专用显存，不能依赖共享显存、CPU offload、disk offload 或 swap。
 - 数据集预处理不能静默修正或删除数据，所有异常标签、空标签、删除样本和保留样本都必须记录。
 - 所有工作必须有计划、进度日志和恢复状态，换终端或中断后要能继续。
+- 同时维护 `project_state.json` 和 `experiment_registry.yaml`，让 AI 和脚本能自动读取当前项目状态。
 - 搜索、下载、调试和修复必须有尝试次数上限，找不到时要记录阻塞和替代方案，不能死循环。
 - 每个项目必须新建专属 conda 环境，不能使用 `base`，不能复用其它项目环境。
 - conda 环境本体不放入项目，只保存 `environment.yml`、显式导出文件和环境报告。
 - 实验结果图必须保存原始数据、绘图脚本、PDF/SVG 矢量图和 PNG 图，不能只靠颜色区分方法。
+- 写论文前必须生成实验一致性检查报告，发现不可比实验时要先修正或说明。
+- 论文核心主张必须写入 `claim_evidence_matrix.md`，并映射到对应证据。
 - 所有论文结果必须能追溯到日志、配置、检查点或结果文件。
 
 ## 推荐工作区结构
@@ -90,6 +97,8 @@ experiments/reports/preprocess_report.md
 ```text
 experiments/state/work_plan.md
 experiments/state/resume_state.md
+experiments/state/project_state.json
+experiments/state/experiment_registry.yaml
 experiments/logs/work_journal.jsonl
 experiments/logs/search_attempts.jsonl
 experiments/reports/blockers.md
@@ -99,6 +108,8 @@ experiments/reports/blockers.md
 
 - `work_plan.md`: 当前目标、阶段、任务状态、假设、约束、预计产物和下一步动作。
 - `resume_state.md`: 中断或换终端后恢复用的 checkpoint，包括已完成内容、活动文件、最近成功命令、阻塞点和下一步。
+- `project_state.json`: 机器可读的项目阶段、当前任务、数据集、基线、已接受版本、失败候选、硬件预算和下一步动作。
+- `experiment_registry.yaml`: 机器可读的实验登记表，记录每个 screening/full run 的配置、状态、指标、产物和接受/拒绝决策。
 - `work_journal.jsonl`: 每次下载、预处理、训练、评估、写作或文件修改的结构化执行记录。
 - `search_attempts.jsonl`: 数据集、模型、论文、下载链接、错误修复等搜索和尝试记录。
 - `blockers.md`: 超过尝试预算后仍无法解决的问题、已尝试方法、需要用户介入的动作和替代方案。
@@ -114,7 +125,7 @@ experiments/reports/blockers.md
 
 ## 改进方向分析
 
-在设计 A/B/C 创新点之前，必须先生成：
+在设计 `M1/M2/M3` 创新版本之前，必须先生成：
 
 ```text
 experiments/reports/improvement_direction_analysis.md
@@ -140,6 +151,14 @@ direction | targeted problem | evidence | expected gain | novelty | implementati
 
 原则是先试证据强、成本合理、最可能带来收益的方向。低证据方向即使看起来流行，也要先拒绝或延后。如果一个方向连续失败，AI 要更新分析并主动扩展候选池，避免在同一个方向反复微调。
 
+快速筛选规则：
+
+- 候选池尽量覆盖至少两个改进方向，例如 representation、fusion、loss/assignment、augmentation、post-processing 或轻量化部署。
+- 每个方向默认最多筛选 3 个候选；同一候选最多修订 2 次。
+- screening 阶段使用相同短 epoch、相同 batch size、相同数据子集或验证集、相同 seed policy 和相同评估脚本。
+- 只有通过 screening 的候选才能进入完整 `M1/M2/M3` 实验。
+- 失败候选不能删除，要写入 `candidate_screening.md` 和 `experiment_registry.yaml`。
+
 ## 实验结果作图要求
 
 这里主要约束实验结果图，不强制规定方法结构图、模块结构图或概念示意图。
@@ -147,7 +166,7 @@ direction | targeted problem | evidence | expected gain | novelty | implementati
 必须覆盖的实验结果图包括：
 
 - 训练/验证曲线：`train loss`、`val loss`、mAP、Precision、Recall、Accuracy、F1 等。
-- 消融实验图：Baseline、after A、after A then B、final method。
+- 消融实验图：`M0` Baseline、`M1`、`M2`、`M3` final method。
 - 效率对比图：Params、FLOPs、FPS、Latency、显存，或 mAP vs Params/FPS/Latency。
 - 类别级性能图：per-class AP、F1、Accuracy、Recall 等。
 - 错误分析图：混淆矩阵，或漏检、误检、定位错误、小目标错误、遮挡错误等。
@@ -159,7 +178,7 @@ direction | targeted problem | evidence | expected gain | novelty | implementati
 ```text
 x-axis: epoch
 y-axis: loss or metric
-curves: Baseline, after A, after A then B, final method
+curves: M0 baseline, M1, M2, M3 final method
 source: training log / validation log / results.csv / TensorBoard / results.jsonl
 style: color + linestyle + marker
 preview PNG: dpi=300
@@ -190,6 +209,34 @@ experiments/figures/<plot_type>/
 ```
 
 所有结果图必须能从原始日志、CSV、JSONL 或 TensorBoard 数据重新生成。
+
+## 可复用模板和脚本
+
+这个 skill 除了 `SKILL.md`，还包含项目启动模板和一致性检查脚本：
+
+```text
+templates/project_state.json
+templates/experiment_registry.yaml
+templates/claim_evidence_matrix.md
+templates/consistency_report.md
+scripts/check_experiment_consistency.py
+```
+
+启动新项目时建议复制：
+
+```text
+templates/project_state.json -> experiments/state/project_state.json
+templates/experiment_registry.yaml -> experiments/state/experiment_registry.yaml
+templates/claim_evidence_matrix.md -> paper/shared/claim_evidence_matrix.md
+```
+
+写最终结果表或论文前运行：
+
+```powershell
+python scripts/check_experiment_consistency.py --registry experiments/state/experiment_registry.yaml --results experiments/results/results.jsonl --output experiments/reports/consistency_report.md
+```
+
+如果报告为 `FAIL`，说明至少存在一个不可直接比较的实验配置，必须修正或明确说明后才能写入论文。
 
 ## Conda 环境隔离
 
@@ -240,7 +287,7 @@ git pull
 在 Codex 或 Claude Code 中显式触发：
 
 ```text
-使用 $run-research-experiments，帮我完成一个深度学习论文实验。要求至少找两个公开数据集，完成下载、预处理、基线复现，先分析改进方向，再做三个有依据的创新点实验，创新点可以是机制递进或模块互补，并最后写中文初稿和英文初稿。
+使用 $run-research-experiments，帮我完成一个深度学习论文实验。要求至少找两个公开数据集，完成下载、预处理、基线复现，先分析改进方向并做快速筛选，再形成 M0/M1/M2/M3 机制版本实验，所有创新都要有依据、能提升、能讲成一个故事，并最后写中文初稿和英文初稿。
 ```
 
 也可以根据具体研究方向补充任务：
@@ -253,3 +300,5 @@ git pull
 
 - `SKILL.md`: skill 主体规则和完整执行流程。
 - `agents/openai.yaml`: Codex UI 识别用的展示元数据。
+- `templates/`: 新项目可复制的状态、实验登记、一致性报告和论文证据矩阵模板。
+- `scripts/check_experiment_consistency.py`: 检查实验配置一致性的无依赖 Python 脚本。

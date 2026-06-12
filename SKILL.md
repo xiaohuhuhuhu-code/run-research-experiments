@@ -1,6 +1,6 @@
 ---
 name: run-research-experiments
-description: Use when an AI coding/research agent needs to run an end-to-end deep learning paper experiment involving public dataset discovery/download, dataset preprocessing, structured preprocessing audit logs, resumable work plans, anti-loop safeguards, per-project conda isolation, label conversion, train/val/test splits, baseline model selection, pretrained weight download, improvement direction analysis, model innovation, ablation experiments, publication-quality experimental result figures, failed-improvement iteration, experiment logging, Chinese manuscript drafting, English manuscript drafting, terminology consistency, grammar polishing, and reproducible research artifacts.
+description: Use when an AI coding/research agent needs to run an end-to-end deep learning paper experiment involving public dataset discovery/download, preprocessing audit logs, resumable plans, anti-loop safeguards, per-project conda isolation, baseline reproduction, evidence-based mechanism innovation, fast candidate screening, M0-M3 ablations, experiment consistency checks, result figures, bilingual manuscript drafting, claim-evidence tracing, and reproducible artifacts.
 ---
 
 # Run Research Experiments
@@ -19,17 +19,22 @@ Default to a general deep learning workflow. If the task is computer vision, det
 - Keep failed ideas in the experiment log under `experiments/`. Only promote effective innovations into the final method and paper narrative.
 - Never write paper results before the corresponding experiments exist. Do not fabricate tables, curves, ablations, or comparisons.
 - Every innovation must have a documented rationale: the baseline/dataset problem it targets, the evidence showing that problem exists, the hypothesis for improvement, and the experiment that verifies it.
-- Innovations `A`, `B`, and `C` must form a coherent research story. They can be progressive internal refinements, complementary modules, or a mix of both, but they must answer the same research problem rather than become unrelated tricks.
+- Use mechanism versions instead of blind letter stacking: `M0` is the reproduced baseline, `M1`, `M2`, and `M3` are accepted method versions. Paper labels such as `A`, `B`, and `C` may be used only after they map to concrete `M1/M2/M3` mechanism changes.
+- Each step from `M1` to `M3` must specify whether it adds, replaces, refines, removes, or re-parameterizes an internal component. Later steps may revise earlier modules; they do not need to simply append more blocks.
 - Module-based innovation is allowed. Modules may improve different parts of the system, such as backbone, neck, head, loss, assignment, augmentation, post-processing, or deployment path, but each module must have evidence, a clear interface, an expected effect, and measured validation.
 - Do not force all innovations into one direction if evidence shows diminishing returns. If one path stalls, broaden the candidate pool across different model components or training/inference stages.
 - Before implementing innovations, analyze and rank improvement directions from evidence. Do not change the model randomly; target the most likely failure sources first to find effective innovations faster.
+- Before full training, run a fast candidate screening protocol when compute permits. Screen multiple evidence-backed candidates cheaply, promote only promising candidates to full `M1/M2/M3` experiments, and stop or broaden the direction when the screening budget is exhausted.
 - Treat local hardware as a hard constraint. Before training, detect or confirm GPU model, dedicated VRAM, CPU, RAM, and disk space. Do not exceed dedicated GPU memory, and do not rely on shared GPU memory, CPU offload, disk offload, or swap to make an experiment fit.
 - Keep `epochs` and `batch size` identical for all model experiments, including baseline, intermediate improved methods, final method, and external comparison baselines. If one method cannot fit the planned batch size, lower the common batch size for all methods.
 - Dataset preprocessing must produce structured audit logs. Archive extraction, generated splits, label conversion, invalid labels, empty labels, file deletion, file retention, and sample filtering must be recorded; never silently fix or drop data.
 - Every substantial task must have a written plan, progress log, and resume checkpoint so another terminal or agent can continue without starting over.
+- Maintain both human-readable and machine-readable state: `work_plan.md` and `resume_state.md` for humans, plus `project_state.json` and `experiment_registry.yaml` for agents and scripts.
 - Use explicit search/retry budgets to prevent dead loops. If a dataset, model, paper, download, or bug fix cannot be found or solved within the budget, stop, log the blocker, and present alternatives.
 - Every project must use a newly created, project-specific conda environment. Do not install dependencies into `base`, do not reuse another project's environment, and do not mix package state across projects.
 - Experimental result figures must be reproducible from logged data. Save the raw plot data, plotting script, vector export, and PNG export; do not create figures from hand-edited numbers.
+- Before final reporting or manuscript drafting, run an experiment consistency check for epochs, batch size, data split, evaluation script, input size, seeds, and hardware-relevant settings.
+- Every important paper claim must be traceable through `paper/shared/claim_evidence_matrix.md` to a metric, table, figure, log, config, checkpoint, or external citation.
 - Prefer reproducible scripts, configs, manifests, and JSONL/CSV logs over manual notes.
 - Use fixed seeds, versioned dependencies, and consistent evaluation settings across baseline and improved models.
 
@@ -66,12 +71,31 @@ paper/
 
 Do not mix these categories. Dataset archives and processed labels stay under `datasets/`; source code, configs, and weights stay under `model_code/`; metrics, logs, checkpoints, plots, and ablation outputs stay under `experiments/`; manuscript files stay under `paper/`.
 
+## Reusable Skill Resources
+
+When starting a new project, copy these templates from this skill into the project workspace before running long tasks:
+
+- `templates/project_state.json` -> `experiments/state/project_state.json`
+- `templates/experiment_registry.yaml` -> `experiments/state/experiment_registry.yaml`
+- `templates/claim_evidence_matrix.md` -> `paper/shared/claim_evidence_matrix.md`
+- `templates/consistency_report.md` -> `experiments/reports/consistency_report.md` if a blank report is needed before running checks.
+
+Before final tables or manuscript claims, run the consistency checker from the project root:
+
+```text
+python <skill_dir>/scripts/check_experiment_consistency.py --registry experiments/state/experiment_registry.yaml --results experiments/results/results.jsonl --output experiments/reports/consistency_report.md
+```
+
+If the script reports `FAIL`, fix the experiment configuration mismatch or document why the affected runs cannot be compared before using those results in the paper.
+
 Maintain these records:
 
 - `experiments/reports/dataset_sources.md`: dataset name, task, official page, paper, license, download URL, access date, citation.
 - `experiments/reports/preprocess_report.md`: split policy, label mapping, ignored labels, image/video counts, class counts, integrity checks.
 - `experiments/state/work_plan.md`: phase plan, task status, assumptions, decisions, and next actions.
 - `experiments/state/resume_state.md`: latest checkpoint for restarting after interruption or switching terminals.
+- `experiments/state/project_state.json`: machine-readable project phase, active task, accepted method versions, blockers, and next action.
+- `experiments/state/experiment_registry.yaml`: machine-readable list of planned, running, completed, failed, accepted, and rejected runs.
 - `experiments/logs/work_journal.jsonl`: structured log of actions, commands, artifacts, results, and next steps.
 - `experiments/logs/search_attempts.jsonl`: structured log of searches, download attempts, failures, and fallback decisions.
 - `experiments/reports/blockers.md`: unresolved blockers, exhausted retry budgets, user actions needed, and safe alternatives.
@@ -82,17 +106,19 @@ Maintain these records:
 - `datasets/manifests/<dataset_name>_preprocess_log.jsonl`: structured event log for extraction, split generation, label conversion, filtering, deletion, and retention.
 - `datasets/manifests/<dataset_name>_label_audit.csv`: invalid labels, empty labels, corrected labels, dropped labels, and reasons.
 - `datasets/manifests/<dataset_name>_split_manifest.csv`: sample id/path, split, split source, seed, and reason.
-- `experiments/reports/experiment_matrix.md`: baseline, improved method after A, improved method after A then B, final improved method after A then B then C, comparison methods, datasets, metrics, seeds, status.
+- `experiments/reports/experiment_matrix.md`: `M0` baseline, `M1`, `M2`, `M3`, comparison methods, datasets, metrics, seeds, status, and whether each method is screening-only or full-run.
 - `experiments/results/results.jsonl`: one line per run with command, config, git SHA, seed, hardware, metrics, checkpoint, log path.
 - `experiments/reports/improvement_direction_analysis.md`: baseline weaknesses, evidence, candidate directions, scores, priorities, and selected improvement path.
 - `experiments/reports/candidate_screening.md`: lightweight screening plan and results for candidate modules/mechanisms before full experiments.
 - `experiments/reports/innovation_audit.md`: accepted and rejected innovations with evidence.
-- `experiments/reports/innovation_story.md`: problem evidence, A/B/C rationale, logical relationship, and paper narrative.
+- `experiments/reports/innovation_story.md`: problem evidence, `M1/M2/M3` rationale, mechanism changes, logical relationship, and paper narrative.
+- `experiments/reports/consistency_report.md`: pre-reporting audit of shared epochs, batch size, split, input size, evaluation script, seeds, and hardware-relevant settings.
 - `experiments/reports/hardware_budget.md`: GPU/VRAM, CPU/RAM, disk, allowed batch/image/model settings, and memory safety margin.
 - `experiments/results/curves/`: raw curve data used for training/validation plots.
 - `experiments/results/tables/`: raw tabular data used for ablation, efficiency, class-wise, error-analysis, and dataset-statistic plots.
 - `experiments/figure_scripts/`: plotting scripts that regenerate experimental result figures.
 - `experiments/figures/`: exported experimental result figures, grouped by plot type.
+- `paper/shared/claim_evidence_matrix.md`: each manuscript claim mapped to evidence files, result ids, figures, tables, or citations.
 - `paper/shared/terminology.md`: Chinese term, English term, abbreviation, first-use rule.
 - `paper/zh/`: Chinese outline, manuscript draft, tables, figure captions, and revision notes.
 - `paper/en/`: English outline, manuscript draft, tables, figure captions, and revision notes.
@@ -118,9 +144,23 @@ timestamp | phase | action | command_or_source | input | output | artifact_paths
 
 Update `experiments/state/resume_state.md` after each phase, before any long-running download/training/evaluation, after any failure, and before ending a session. It must contain the current goal, completed work, active files, last successful command, running or pending commands, blockers, and the exact next action.
 
+Also update `experiments/state/project_state.json` and `experiments/state/experiment_registry.yaml` whenever phase, run status, accepted method version, blocker, or next action changes. Prefer copying the templates from this skill's `templates/` directory when starting a new project.
+
+`project_state.json` must include:
+
+```text
+project_id | current_phase | active_task | datasets | baseline | method_versions | accepted_versions | rejected_candidates | hardware_budget | blockers | next_action | last_updated
+```
+
+`experiment_registry.yaml` must include one entry per screening or full run:
+
+```text
+run_id | method_version | run_type | dataset | seed | config | epochs | batch_size | input_size | eval_script | status | metrics | artifacts | decision
+```
+
 When resuming after an interruption or switching terminals:
 
-1. Read `experiments/state/resume_state.md`, `experiments/state/work_plan.md`, `experiments/logs/work_journal.jsonl`, `experiments/results/results.jsonl`, and relevant reports before acting.
+1. Read `experiments/state/project_state.json`, `experiments/state/experiment_registry.yaml`, `experiments/state/resume_state.md`, `experiments/state/work_plan.md`, `experiments/logs/work_journal.jsonl`, `experiments/results/results.jsonl`, and relevant reports before acting.
 2. Continue from the next incomplete task instead of repeating completed downloads, preprocessing, training, or writing.
 3. Verify existing artifacts before reusing them. If an artifact is missing or corrupt, log the reason before regenerating it.
 
@@ -240,7 +280,7 @@ Reproduce the primary baseline before adding innovations. If reproduced metrics 
 
 ## Phase 4: Improvement Direction Analysis
 
-Before designing A/B/C, write `experiments/reports/improvement_direction_analysis.md`. The goal is to quickly identify the most promising innovation directions instead of randomly modifying the model.
+Before designing `M1/M2/M3`, write `experiments/reports/improvement_direction_analysis.md`. The goal is to quickly identify the most promising innovation directions instead of randomly modifying the model.
 
 Use evidence from:
 
@@ -275,18 +315,32 @@ Rules:
 - If all top-ranked candidates fail, update the analysis and deliberately broaden the search space instead of repeatedly tweaking the same idea.
 - Write `experiments/reports/candidate_screening.md` with the screening plan, quick results, and decision for each candidate.
 
-Do not proceed to final A/B/C design until the improvement direction analysis identifies why those directions are likely to be effective.
+### Fast Candidate Screening
+
+Use screening to find effective innovations faster without burning full training time.
+
+Screening rules:
+
+- Build a candidate pool across at least two improvement directions when feasible, such as representation, fusion, loss/assignment, augmentation, temporal modeling, post-processing, or lightweight deployment.
+- For each direction, try only evidence-backed candidates with a stated hypothesis and expected metric effect.
+- Use the same screening budget for comparable candidates: same subset, same short epoch count, same batch size, same seed policy, same input size, and same evaluation script.
+- Default budget: at most 3 candidates per direction and at most 2 revision attempts for the same candidate. If all candidates in a direction fail, stop that direction and broaden the search.
+- Promote a candidate to full experiments only if it improves the screening metric, fixes a diagnosed failure mode, or improves efficiency without unacceptable accuracy loss.
+- Record every screened candidate in `experiments/reports/candidate_screening.md` and `experiments/state/experiment_registry.yaml`, including rejected candidates.
+
+Do not proceed to final `M1/M2/M3` design until the improvement direction analysis and candidate screening identify why the selected mechanisms are likely to be effective.
 
 ## Phase 5: Innovation Design
 
-Define at least three candidate innovations, named `A`, `B`, and `C`. Each must have:
+Define at least three accepted method versions: `M1`, `M2`, and `M3`. `M0` is always the reproduced baseline. Each method version must have:
 
 - A source of evidence for the problem, such as baseline error analysis, literature gap, dataset statistics, qualitative failures, metric weakness, latency bottleneck, or deployment constraint.
 - A clear hypothesis tied to a known weakness of the baseline or dataset.
 - A minimal implementation plan.
 - A mechanism explanation describing why the change should address that weakness.
 - A statement of what internal part or module of the method is being changed, such as backbone representation, neck fusion, detection head, loss, assignment strategy, temporal modeling, augmentation policy, post-processing, or deployment path.
-- A relationship note explaining how it relates to the other accepted innovations. `B` and `C` may address remaining limitations after earlier steps, or they may be complementary modules that solve different evidence-backed weaknesses of the same baseline.
+- An operation type: `add`, `replace`, `refine`, `remove`, or `re-parameterize`.
+- A relationship note explaining how it relates to the other accepted versions. `M2` and `M3` may address remaining limitations after earlier steps, replace a weak part of `M1`, refine an accepted module, or add complementary mechanisms that solve different evidence-backed weaknesses of the same baseline.
 - A module interface note when the innovation is modular: where it connects, what tensor/data flow it changes, what extra cost it adds, and what failure mode it is expected to fix.
 - Expected effect on accuracy, robustness, speed, parameters, FLOPs, or memory.
 - A risk note explaining how it could fail.
@@ -294,37 +348,37 @@ Define at least three candidate innovations, named `A`, `B`, and `C`. Each must 
 
 Good innovation categories include architecture modules, feature fusion, attention, loss functions, label assignment, data augmentation, temporal modeling, lightweight deployment changes, domain adaptation, post-processing, or training strategy. Avoid cosmetic changes that cannot be isolated experimentally.
 
-Design `A`, `B`, and `C` with enough breadth to avoid getting stuck in one narrow direction. It is acceptable to build modules, replace modules, or combine modules when the evidence supports doing so. What is not acceptable is blind stacking: adding modules only because they sound useful, without a targeted problem, interface explanation, cost analysis, and validation.
+Design `M1`, `M2`, and `M3` with enough breadth to avoid getting stuck in one narrow direction. It is acceptable to build modules, replace modules, refine modules, remove harmful parts, or combine complementary modules when the evidence supports doing so. What is not acceptable is blind stacking: adding modules only because they sound useful, without a targeted problem, interface explanation, cost analysis, and validation.
 
-Before committing to final A/B/C, create a candidate pool across at least two different improvement directions when feasible, such as representation, fusion, loss/assignment, augmentation, temporal modeling, post-processing, or lightweight deployment. Run lightweight screening within the hardware and anti-loop budgets, then select the strongest validated and most coherent set.
+Before committing to final `M1/M2/M3`, create a candidate pool across at least two different improvement directions when feasible, such as representation, fusion, loss/assignment, augmentation, temporal modeling, post-processing, or lightweight deployment. Run lightweight screening within the hardware and anti-loop budgets, then select the strongest validated and most coherent version sequence.
 
-Before implementing A/B/C, write `experiments/reports/innovation_story.md` with this structure:
+Before implementing `M1/M2/M3`, write `experiments/reports/innovation_story.md` with this structure:
 
 ```text
 Observed problem:
 Evidence:
 Research hypothesis:
-A rationale:
-B rationale:
-C rationale:
-How A -> B -> C forms one coherent method:
+M1 change, operation type, and rationale:
+M2 change, operation type, and rationale:
+M3 change, operation type, and rationale:
+How M0 -> M1 -> M2 -> M3 forms one coherent method:
 What mechanism or module changes at each step:
 Why the selected modules/refinements are complementary:
 Expected verification:
 Risks and fallback ideas:
 ```
 
-The story must be understandable in the paper's introduction and method sections. If the three innovations cannot be explained as one coherent answer to the research problem, redesign them before running the full ablation. A coherent answer may be a progressive chain, a complementary module set, or a hybrid of both.
+The story must be understandable in the paper's introduction and method sections. If the three accepted versions cannot be explained as one coherent answer to the research problem, redesign them before running the full ablation. A coherent answer may be a progressive chain, a complementary module set, a replacement/refinement sequence, or a hybrid of these.
 
 ## Phase 6: Experiment Loop
 
 Run experiments in this required order:
 
 ```text
-Baseline
-Improved method after A
-Improved method after A then B
-Final improved method after A then B then C
+M0 Baseline
+M1 accepted mechanism version
+M2 accepted mechanism version
+M3 final accepted mechanism version
 ```
 
 For each step:
@@ -333,12 +387,12 @@ For each step:
 2. Evaluate on every selected dataset or use one dataset for screening and another for final validation if compute is limited.
 3. Record metrics, training curves, confusion/error analysis, qualitative examples, speed, parameters, FLOPs, and hardware.
 4. Compare against the immediately previous accepted model and the original baseline.
-5. Accept the innovation only if the primary metric improves meaningfully and trade-offs remain acceptable.
-6. After accepting each innovation, update `experiments/reports/innovation_story.md` so the rationale and measured evidence stay aligned.
+5. Accept the method version only if the primary metric improves meaningfully, a diagnosed failure mode is fixed, or an efficiency objective improves with acceptable trade-offs.
+6. After accepting each method version, update `experiments/reports/innovation_story.md`, `experiments/state/project_state.json`, and `experiments/state/experiment_registry.yaml` so the rationale and measured evidence stay aligned.
 7. Keep every run within the documented hardware budget. Configuration changes made to fit VRAM must be applied consistently to baseline and improved methods.
 8. Record `epochs`, `batch size`, `num_workers`, precision, gradient accumulation, and measured throughput for each run. `num_workers` may be tuned for throughput, but `epochs` and `batch size` must remain fixed across model experiments.
 
-Use labels like `A`, `A then B`, and `A then B then C` only as shorthand in tables. In implementation and writing, describe the actual module or mechanism change, not just which letters were added.
+Use labels like `A`, `B`, and `C` only as optional paper shorthand after they map to concrete versions such as `M1: replace neck fusion`, `M2: refine assignment loss`, or `M3: add post-processing calibration`. In implementation and writing, describe the actual mechanism change, not just which letters were added.
 
 Default acceptance guideline:
 
@@ -350,30 +404,32 @@ If an innovation does not improve:
 
 - Do not hide it. Log it as rejected or under revision.
 - Diagnose likely causes using loss curves, class-wise metrics, object-size metrics, qualitative errors, and overfitting/underfitting signals.
-- Revise the idea, replace it with a better candidate, and rerun the affected step.
+- Revise the idea, replace it with a better candidate, remove the harmful part, or re-parameterize the mechanism, then rerun the affected step.
 - Continue until there are three accepted innovations or until compute/data constraints make that impossible. If impossible, document the constraint and keep the strongest validated subset.
 
 ## Phase 7: Ablation And Comparison
 
 After the final improved method is accepted, run final ablations:
 
-- Baseline
-- Improved method after A
-- Improved method after A then B
-- Final improved method after A then B then C
-- Targeted diagnostic checks only when needed to explain a mechanism or module interaction. Do not present arbitrary `A/B/C` permutations as the main paper story, but do run targeted interaction checks when modules may help or interfere with each other.
+- `M0` baseline.
+- `M1` accepted mechanism version.
+- `M2` accepted mechanism version.
+- `M3` final accepted mechanism version.
+- Targeted diagnostic checks only when needed to explain a mechanism or module interaction. Do not present arbitrary permutations as the main paper story, but do run targeted interaction checks when mechanisms may help or interfere with each other.
 - Comparison against selected external baselines under the same evaluation protocol.
 - Cross-dataset validation on at least two public datasets.
 - Efficiency comparison: parameters, FLOPs, FPS/latency, memory when relevant.
 
 Use the same metric names and decimal precision across all tables. Mark the best and second-best values only after verifying the numbers come from logs.
 
+Before writing result tables or paper claims, generate `experiments/reports/consistency_report.md`. The report must pass or explicitly explain every mismatch in epochs, batch size, data split, input size, evaluation script, seed policy, precision, gradient accumulation, and hardware-relevant settings.
+
 ## Phase 8: Reporting Results
 
 Produce these artifacts before writing the paper:
 
 - Main result table across datasets.
-- Ablation table for the mechanism steps: after A, after A then B, and final method after A then B then C.
+- Ablation table for the mechanism versions: `M0`, `M1`, `M2`, and `M3`.
 - Efficiency table.
 - Training/validation curves.
 - Qualitative result figures showing typical success and failure cases.
@@ -381,8 +437,15 @@ Produce these artifacts before writing the paper:
 - Dataset-statistic figures that support preprocessing, problem diagnosis, or improvement direction analysis.
 - Error analysis grouped by class, object size, scene type, occlusion, lighting, or other task-relevant factors.
 - Reproducibility checklist with environment, commands, seeds, configs, checkpoints, and hardware.
+- Claim-evidence matrix mapping each manuscript claim to supporting result files, tables, figures, logs, configs, checkpoints, or citations.
 
 Every number in every paper table must link back to `experiments/results/results.jsonl`, a training log, evaluation output, or a generated report.
+
+Before manuscript drafting, create `paper/shared/claim_evidence_matrix.md` with:
+
+```text
+claim_id | manuscript_section | claim_text | evidence_type | evidence_path | result_id_or_citation | status | notes
+```
 
 ### Experimental Result Figure Requirements
 
@@ -391,7 +454,7 @@ These requirements apply to experimental result figures only. Method architectur
 Required experimental result figures:
 
 - Training/validation curves: train loss, validation loss, and task metrics such as mAP50, mAP50-95, Precision, Recall, Accuracy, F1, IoU, or other task-specific metrics.
-- Ablation result figure: Baseline, improved method after A, improved method after A then B, and final method.
+- Ablation result figure: `M0` baseline, `M1`, `M2`, and `M3` final method.
 - Efficiency comparison figure: parameters, FLOPs, FPS, latency, memory, or scatter plots such as metric vs Params, metric vs FPS, or metric vs Latency.
 - Class-wise performance figure: per-class AP, F1, Accuracy, Recall, or task-relevant class metric.
 - Error-analysis figure: confusion matrix for classification, or detection/segmentation error types such as missed detection, false positive, localization error, small-object error, occlusion error, or label-noise-related error.
@@ -403,7 +466,7 @@ Training/validation curve rules:
 ```text
 x-axis: epoch
 y-axis: loss or metric
-curves: Baseline, improved method after A, improved method after A then B, final method
+curves: M0 baseline, M1, M2, M3 final method
 source: training log, validation log, results.csv, TensorBoard log, or experiments/results/results.jsonl
 style: color + linestyle + marker
 preview export: PNG at dpi=300
@@ -421,14 +484,14 @@ vector export: PDF or SVG
 Figure style rules:
 
 - Do not distinguish methods by color alone. Use color plus linestyle plus marker for lines, and color plus hatch or edge style for bars.
-- Suggested line styles: Baseline = solid + circle marker, after A = dashed + square marker, after A then B = dash-dot + triangle marker, final = dotted + diamond marker.
+- Suggested line styles: `M0` baseline = solid + circle marker, `M1` = dashed + square marker, `M2` = dash-dot + triangle marker, `M3` final = dotted + diamond marker.
 - Line width: 2.0 to 2.5 pt. Use 2.5 pt for primary curves and 2.0 pt for auxiliary curves.
 - Axis spine width: 1.2 to 1.5 pt.
 - Grid width: 0.6 to 0.8 pt with alpha 0.25 to 0.35.
 - Marker size: 5 to 7 pt.
 - Bar edge line width: 1.0 to 1.2 pt.
 - Recommended font sizes: axis labels 11 to 12 pt, ticks 9 to 10 pt, legend 9 to 10 pt, subplot titles 11 to 12 pt.
-- Legends must use full method names or clear stage names, not only `A`, `B`, or `C`.
+- Legends must use full method names or clear stage names, not only `A`, `B`, `C`, or bare `M1/M2/M3`.
 - Legends must not cover the main data. Place them outside the axes or above the plot when needed.
 - Figures must remain interpretable in black-and-white printing.
 
@@ -463,13 +526,37 @@ Recommended structure:
 Chinese writing rules:
 
 - Keep the problem, motivation, method, and experimental evidence aligned.
-- Explain A, B, and C as a coherent method, not three unrelated tricks.
+- Explain `M1`, `M2`, and `M3` as a coherent method evolution, not three unrelated tricks.
 - For each innovation, state the targeted problem, supporting evidence, design motivation, and verified effect.
 - Explain what part of the method was changed at each step, including module placement and data flow when a module is introduced.
-- Present A/B/C in a smooth logical order, such as problem diagnosis -> candidate module/mechanism screening -> selected complementary improvements -> final robust method.
+- Present the method versions in a smooth logical order, such as problem diagnosis -> candidate module/mechanism screening -> selected mechanism change -> refinement/replacement -> final robust method.
 - Use precise claims: say where the method improves, on which dataset, under which metric.
 - Do not claim state-of-the-art unless the comparison table truly supports it.
 - Include limitations and failure cases when they affect interpretation.
+- Link each major claim to `paper/shared/claim_evidence_matrix.md` before writing the final Chinese or English draft.
+
+### Chinese Small-Paper Writing And Formatting Rules
+
+Use these rules when the user asks for a Chinese SCI/EI-style small paper or asks to polish a Chinese manuscript according to prior preferences:
+
+- Drafting route: produce a Chinese draft first, revise the Chinese manuscript against the user's structural and formatting requirements, then polish or translate. Do not jump directly to an English manuscript when the user asks for a Chinese first version.
+- Template matching: if the user provides a sample Word document, inspect its fonts, heading levels, caption style, paragraph spacing, table style, reference style, and page layout before generating the new manuscript. Match the sample unless the user gives a newer explicit formatting rule.
+- Title pattern: use “一种基于……的……方法” when the paper is method-oriented. The title must name the core mechanism and the target task directly.
+- Abstract: target about 400 Chinese characters. Sentence 1 states the research meaning. Sentence 2 states the concrete problem and “本文提出了一种基于……的……方法”. Then state implementation, measured effect, and significance. Do not include detailed hardware model names, formula symbols, inequalities, or over-specific abbreviations in the abstract.
+- Keywords: use five keywords ordered from broad background to specific technology.
+- Introduction: write research meaning, current methods, research gaps that this paper actually addresses, this paper’s work, and manuscript structure. Citations should be distributed across the first two paragraphs, cited one by one, and should not be reused later in Related Work unless unavoidable.
+- Related Work: organize from large background to concrete task in about three paragraphs, about 300 Chinese characters per paragraph when the journal format permits. Each paragraph should correspond to verified references and should not overuse old literature.
+- Claims: use declarative academic prose. Do not advertise, overstate novelty, claim state-of-the-art without evidence, use emotional adjectives, use story-like phrasing, use unnecessary quotation marks, or raise gaps that the method/experiments do not address.
+- Methods: explain the system top-down from input to output. Define variables once, keep notation consistent across equations, tables, figures, and text, and provide formulas for model outputs, fusion, gating, and decision rules when applicable.
+- Experiments: every table/figure needs one analysis paragraph. Include ablation, efficiency, and failure/degradation analysis when supported by logs. Do not fabricate experiments; if an experiment cannot be added, state the limitation.
+- Tables: use three-line tables. Center cell content horizontally and vertically, remove paragraph indents inside cells, keep decimal places consistent, and adjust widths so cells do not break into one- or two-character lines. Any variable, metric symbol, subscript, superscript, Greek letter, or formula-like expression inside a table must be inserted as a Word/MathType-compatible equation object, not typed as plain text.
+- Figures: export paper figures at 600 dpi or higher. Method diagrams should be drawn in PPT or another editable diagram source first when possible; use differentiated colors/shapes, orthogonal arrows, no arrow-through-text, no overlapping lines, and no text overflow. If a specialized diagram tool or skill is available, consider it for deep-learning/model architecture diagrams. If the diagram appears in the Word manuscript and contains model variables or formulas, prefer an editable Word diagram or embedded editable source; variables and formulas in the diagram must be Word/MathType-compatible equation objects whenever feasible. Do not leave formula variables in a raster image if the user needs to edit them in Word.
+- Equations: use Word/MathType-compatible equation objects when generating DOCX. This applies to display equations, inline variables in body text, table cells, figure labels, and captions when they contain formula symbols. Put display equation numbers on the right, use single line spacing around equations, captions, and figure/table labels when needed for complete display, and verify in exported PDF that subscripts and symbols are complete.
+- Word formatting: body Chinese font is 宋体小四, English font is Times New Roman 小四. Captions and references use 五号. First-level headings such as 引言、相关工作、方法与材料、实验分析、结论、参考文献 should have no first-line indent; second-level headings such as 3.1 and 4.1 should also have no indent. Do not insert spaces between adjacent Chinese and English/numeric terms in body text unless required by the target journal or a style guide.
+- Citations and references: cite in order without skipped numbers; avoid ranges longer than three references, and prefer individual citations. Use superscript citation markers linked to the reference list. In DOCX, references must use real Word automatic numbering, not hand-typed `[1]` text. Add bookmarks or equivalent anchors on numbered reference items so each in-text citation can jump to the corresponding reference. Target 30 references when the user requests a standard small-paper reference set. Verify every reference against Crossref, publisher pages, or PDFs, and ensure titles match publisher/PDF metadata rather than AI-generated variants. Prefer recent five-year journal papers, CAS Q2 or above when feasible, fewer OA/MDPI/conference references, GB/T 7714 style, no DOI in the final reference list, page range or article number when available, hanging indent of two Chinese characters, and justified alignment. Download legally available PDFs when possible and produce a manifest for unavailable or access-restricted PDFs.
+- Revision loop: after the first complete draft, simulate at least three reviewers with at least three comments each, including content, experiment, and formatting issues. Revise according to feasible comments. Add experiments only when existing data/logs support them; otherwise state why the experiment cannot be added.
+- File hygiene: after producing the final package, remove temporary lock files and clearly obsolete drafts, or move old versions into an archive folder. Do not delete source data, verified references, scripts, or user-provided files.
+- Final QA: export DOCX to PDF, render or visually inspect pages, and check headings, duplicate numbering, table layout, figure/caption spacing, equation completeness, reference numbering, citation jump links, typos, and Chinese-English spacing. For DOCX structure, verify that formula-like content is stored as equation objects, reference entries are real numbered-list paragraphs, manual reference-number paragraphs are absent, citation anchors resolve to reference bookmarks, and exported PDF retains link annotations when citation jumps are required. Check that title numbering, figure numbering, table numbering, and reference numbering are not duplicated. After QA, report any remaining limits such as inaccessible reference PDFs or experiments that could not be added from existing data.
 
 ### Chinese Small-Paper Writing And Formatting Rules
 
@@ -518,6 +605,7 @@ English writing rules:
 Do not report the work as complete until these are true:
 
 - `experiments/state/work_plan.md`, `experiments/state/resume_state.md`, and `experiments/logs/work_journal.jsonl` are current enough for another agent or terminal to continue.
+- `experiments/state/project_state.json` and `experiments/state/experiment_registry.yaml` are current enough for another agent or script to resume.
 - Search/retry budgets were followed, and exhausted loops are documented in `experiments/reports/blockers.md`.
 - A new project-specific conda environment was created, used for all project commands, documented, and exported.
 - At least two public datasets are selected, sourced, downloaded where permitted, and documented.
@@ -530,12 +618,15 @@ Do not report the work as complete until these are true:
 - The primary baseline is reproduced or the reproduction gap is explained and fixed as far as possible.
 - Improvement directions were analyzed, scored, screened when feasible, and documented before final innovation design.
 - At least three innovations were attempted, with accepted/rejected status recorded.
-- Baseline, improved method after A, improved method after A then B, and final improved method experiments are logged.
+- `M0`, `M1`, `M2`, and `M3` experiments are logged.
 - Only validated improvements appear as final innovations.
 - Every final innovation has a documented problem, evidence, rationale, mechanism, and measured effect.
-- A/B/C are evidence-backed mechanism or module improvements with a coherent relationship, not arbitrary modules that were simply stacked or permuted.
-- The final A/B/C method has a coherent story that can be explained in the introduction, method, and ablation sections, whether the story is progressive, modular-complementary, or hybrid.
+- `M1/M2/M3` are evidence-backed mechanism or module improvements with a coherent relationship, not arbitrary modules that were simply stacked or permuted.
+- Each accepted version records whether it adds, replaces, refines, removes, or re-parameterizes an internal mechanism.
+- The final `M0 -> M1 -> M2 -> M3` story can be explained in the introduction, method, and ablation sections, whether the story is progressive, modular-complementary, replacement/refinement-based, or hybrid.
+- `experiments/reports/consistency_report.md` verifies shared epochs, batch size, data split, input size, evaluation script, seed policy, and hardware-relevant settings.
 - Final results are traceable to logs/configs/checkpoints.
+- `paper/shared/claim_evidence_matrix.md` links major Chinese and English manuscript claims to evidence.
 - Chinese draft exists before English draft.
 - English terminology matches the Chinese draft and terminology table.
 - The final response names the key artifacts and any unresolved constraints.
