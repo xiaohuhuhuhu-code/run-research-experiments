@@ -18,6 +18,7 @@
 - 需要每个论文主张都能追溯到实验结果、图表、日志、配置或引用。
 - 需要每个实验项目新建独立 conda 环境，避免污染 `base` 或其它项目环境。
 - 需要先写中文初稿，再基于中文稿写英文初稿，并统一专业术语。
+- 需要生成或修订 Word/DOCX 中文稿，并检查正文、标题导航、表格、表后说明、版式和术语边界。
 
 ## 核心规则
 
@@ -39,6 +40,7 @@
 - 实验结果图必须保存原始数据、绘图脚本、PDF/SVG 矢量图和 PNG 图，不能只靠颜色区分方法。
 - 写论文前必须生成实验一致性检查报告，发现不可比实验时要先修正或说明。
 - 论文核心主张必须写入 `claim_evidence_matrix.md`，并映射到对应证据。
+- Word/DOCX 中文稿必须满足正文宋体小四、英文 Times New Roman、小四、首行缩进 2 字符、固定 22 磅行距、Word 内置 Heading 导航、三线表、表后说明和术语一致性要求。
 - 所有论文结果必须能追溯到日志、配置、检查点或结果文件。
 
 ## 推荐工作区结构
@@ -218,6 +220,7 @@ experiments/figures/<plot_type>/
 templates/project_state.json
 templates/experiment_registry.yaml
 templates/claim_evidence_matrix.md
+templates/word_format_checklist.md
 templates/consistency_report.md
 scripts/check_experiment_consistency.py
 ```
@@ -228,6 +231,7 @@ scripts/check_experiment_consistency.py
 templates/project_state.json -> experiments/state/project_state.json
 templates/experiment_registry.yaml -> experiments/state/experiment_registry.yaml
 templates/claim_evidence_matrix.md -> paper/shared/claim_evidence_matrix.md
+templates/word_format_checklist.md -> paper/shared/word_format_checklist.md
 ```
 
 写最终结果表或论文前运行：
@@ -301,4 +305,5 @@ git pull
 - `SKILL.md`: skill 主体规则和完整执行流程。
 - `agents/openai.yaml`: Codex UI 识别用的展示元数据。
 - `templates/`: 新项目可复制的状态、实验登记、一致性报告和论文证据矩阵模板。
+- `templates/word_format_checklist.md`: Word/DOCX 中文稿正文、标题导航、表格、表后说明、版式和术语边界检查清单。
 - `scripts/check_experiment_consistency.py`: 检查实验配置一致性的无依赖 Python 脚本。
