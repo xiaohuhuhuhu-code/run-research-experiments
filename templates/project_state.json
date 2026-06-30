@@ -8,11 +8,24 @@
   "baseline": {
     "method_version": "M0",
     "name": "",
+    "baseline_role": "primary_recent_peer_baseline",
+    "paper_year": null,
     "repo": "",
     "commit": "",
     "weights": "",
     "status": "pending"
   },
+  "comparison_baselines": [
+    {
+      "name": "",
+      "baseline_role": "classic",
+      "paper_year": null,
+      "repo": "",
+      "weights": "",
+      "status": "pending",
+      "notes": ""
+    }
+  ],
   "method_versions": [
     {
       "method_version": "M0",
@@ -30,10 +43,21 @@
     "gpu": "",
     "dedicated_vram_gb": null,
     "max_allowed_vram_gb": null,
+    "target_vram_gb": null,
     "shared_memory_allowed": false,
+    "cpu_offload_allowed": false,
+    "disk_offload_allowed": false,
     "common_epochs": null,
     "common_batch_size": null,
-    "num_workers": null
+    "num_workers": null,
+    "wsl_allowed": true,
+    "proxy_or_mirror_used": false
+  },
+  "environment_policy": {
+    "conda_env_name": "",
+    "use_stable_versions": true,
+    "wsl_distribution": "",
+    "proxy_or_mirror_notes": ""
   },
   "blockers": [],
   "next_action": ""

@@ -2,6 +2,8 @@ runs:
   - run_id: M0_dataset_seed0_full
     method_version: M0
     method_name: Baseline
+    baseline_role: primary_recent_peer_baseline
+    source_paper_year: null
     operation_type: baseline
     run_type: full
     dataset: dataset_name
@@ -19,6 +21,12 @@ runs:
     gradient_accumulation: 1
     num_workers: 8
     hardware: RTX_4090_24GB
+    max_allowed_vram_gb: 23
+    peak_dedicated_vram_gb: null
+    shared_memory_used: false
+    cpu_offload_used: false
+    disk_offload_used: false
+    swap_used: false
     status: pending
     metrics: {}
     artifacts:

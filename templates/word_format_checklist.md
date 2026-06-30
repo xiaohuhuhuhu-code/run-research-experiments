@@ -13,6 +13,7 @@ Use this checklist for Chinese DOCX/Word manuscript generation, revision, and fi
 - Line spacing: fixed 22 pt.
 - Style: academic, concise, clear, not overly colloquial.
 - Mixed Chinese/English/numeric terms should be visually coordinated.
+- Use Chinese double quotation marks “ ” in Chinese prose, and fix final layout if a quotation mark appears as the first visible character of a line.
 
 ## Titles And Navigation
 
@@ -35,7 +36,8 @@ Use this checklist for Chinese DOCX/Word manuscript generation, revision, and fi
 - Keep decimal places consistent within each metric column.
 - Avoid crowded pages by shortening field names or splitting large tables.
 - Avoid table page breaks when possible. If a table must cross pages, use a continuation table.
-- Insert formula-like variables, subscripts, superscripts, and Greek letters as Word/MathType-compatible equation objects when generating DOCX.
+- Do not compress table text shapes or enable “fit text”.
+- Keep formula-like variables, subscripts, superscripts, and Greek letters as `$...$` LaTeX text under the DOCX formula policy.
 
 ## Table Explanation Paragraphs
 
@@ -66,6 +68,9 @@ Use this checklist for Chinese DOCX/Word manuscript generation, revision, and fi
 - Confirm Word heading styles drive the navigation pane outline.
 - Confirm table titles are above tables and every table has a following explanation paragraph.
 - Confirm three-line tables, table font size 五号, single line spacing, no table-cell first-line indent, and no crowded table pages.
+- Confirm table text is not compressed and “fit text” is disabled.
 - Confirm long tables are split or continued correctly.
+- Confirm formulas remain visible as `$...$` LaTeX text and no DOCX OMML formula tags were generated.
+- Confirm Chinese double quotation marks and line-start punctuation are acceptable after PDF export.
 - Confirm terminology and conceptual boundaries are consistent.
 - Report any remaining limitations.

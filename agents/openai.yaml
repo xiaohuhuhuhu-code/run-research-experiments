@@ -1,4 +1,4 @@
 interface:
   display_name: "Run Research Experiments"
-  short_description: "Datasets, M0-M3 experiments, evidence, papers, and Word QA"
-  default_prompt: "Use $run-research-experiments to complete a deep learning paper experiment from public datasets through M0-M3 mechanism experiments, consistency checks, evidence tracing, bilingual drafts, and Chinese Word/DOCX formatting QA."
+  short_description: "Stable environments, datasets, baselines, M0-M3, evidence, and papers"
+  default_prompt: "Use $run-research-experiments to complete a deep learning paper experiment from isolated conda setup and public datasets through recent/classic baselines, sequential M0-M3 mechanism experiments, consistency checks, evidence tracing, bilingual drafts, and Chinese Word/DOCX formatting QA."

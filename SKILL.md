@@ -16,10 +16,12 @@ Default to a general deep learning workflow. If the task is computer vision, det
 - Use at least two public datasets unless the user explicitly narrows the task.
 - Search the web for current official dataset pages, papers, download links, licenses, and citation requirements. Do not invent download URLs.
 - Download datasets and pretrained models automatically when public access permits it. If access requires login, form approval, manual license acceptance, or a private token, stop and give the user the exact action needed.
+- If an otherwise suitable public dataset cannot be downloaded automatically, create a documented manual-download folder and instruction note under `datasets/raw/<dataset_name>/manual_download_required.md` so the user can place the archive there without breaking the workflow.
 - Keep failed ideas in the experiment log under `experiments/`. Only promote effective innovations into the final method and paper narrative.
 - Never write paper results before the corresponding experiments exist. Do not fabricate tables, curves, ablations, or comparisons.
 - Every innovation must have a documented rationale: the baseline/dataset problem it targets, the evidence showing that problem exists, the hypothesis for improvement, and the experiment that verifies it.
 - Use mechanism versions instead of blind letter stacking: `M0` is the reproduced baseline, `M1`, `M2`, and `M3` are accepted method versions. Paper labels such as `A`, `B`, and `C` may be used only after they map to concrete `M1/M2/M3` mechanism changes.
+- Accept innovations sequentially: lock `M1` only after it improves on `M0`, lock `M2` only after it improves on accepted `M1`, and lock `M3` only after it improves on accepted `M2`. For accuracy-oriented papers, the final accepted sequence must be monotonic on the primary metric, with `M3` best; for efficiency-oriented papers, define the primary target metric before running experiments and keep accuracy trade-offs explicit.
 - Each step from `M1` to `M3` must specify whether it adds, replaces, refines, removes, or re-parameterizes an internal component. Later steps may revise earlier modules; they do not need to simply append more blocks.
 - Module-based innovation is allowed. Modules may improve different parts of the system, such as backbone, neck, head, loss, assignment, augmentation, post-processing, or deployment path, but each module must have evidence, a clear interface, an expected effect, and measured validation.
 - Do not force all innovations into one direction if evidence shows diminishing returns. If one path stalls, broaden the candidate pool across different model components or training/inference stages.
@@ -27,12 +29,15 @@ Default to a general deep learning workflow. If the task is computer vision, det
 - Before full training, run a fast candidate screening protocol when compute permits. Screen multiple evidence-backed candidates cheaply, promote only promising candidates to full `M1/M2/M3` experiments, and stop or broaden the direction when the screening budget is exhausted.
 - Treat local hardware as a hard constraint. Before training, detect or confirm GPU model, dedicated VRAM, CPU, RAM, and disk space. Do not exceed dedicated GPU memory, and do not rely on shared GPU memory, CPU offload, disk offload, or swap to make an experiment fit.
 - Keep `epochs` and `batch size` identical for all model experiments, including baseline, intermediate improved methods, final method, and external comparison baselines. If one method cannot fit the planned batch size, lower the common batch size for all methods.
+- Use recent and classic baselines together: the primary peer baseline should come from the most recent two years when a credible reproducible implementation exists, and at least two additional classic baselines should be included for context when feasible.
 - Dataset preprocessing must produce structured audit logs. Archive extraction, generated splits, label conversion, invalid labels, empty labels, file deletion, file retention, and sample filtering must be recorded; never silently fix or drop data.
 - Every substantial task must have a written plan, progress log, and resume checkpoint so another terminal or agent can continue without starting over.
 - Maintain both human-readable and machine-readable state: `work_plan.md` and `resume_state.md` for humans, plus `project_state.json` and `experiment_registry.yaml` for agents and scripts.
 - Use explicit search/retry budgets to prevent dead loops. If a dataset, model, paper, download, or bug fix cannot be found or solved within the budget, stop, log the blocker, and present alternatives.
 - Every project must use a newly created, project-specific conda environment. Do not install dependencies into `base`, do not reuse another project's environment, and do not mix package state across projects.
+- Prefer stable dependency versions over newest releases. WSL is allowed when it improves compatibility, and proxy/VPN package mirrors may be used when available; record those choices in the environment report.
 - Experimental result figures must be reproducible from logged data. Save the raw plot data, plotting script, vector export, and PNG export; do not create figures from hand-edited numbers.
+- After experiments, package raw experimental evidence such as logs, metrics, configs, curve data, tables, and figure data with a manifest so the paper results remain reproducible.
 - Before final reporting or manuscript drafting, run an experiment consistency check for epochs, batch size, data split, evaluation script, input size, seeds, and hardware-relevant settings.
 - Every important paper claim must be traceable through `paper/shared/claim_evidence_matrix.md` to a metric, table, figure, log, config, checkpoint, or external citation.
 - Prefer reproducible scripts, configs, manifests, and JSONL/CSV logs over manual notes.
@@ -103,6 +108,7 @@ Maintain these records:
 - `model_code/environment/environment.yml`: reproducible conda environment specification.
 - `model_code/environment/conda_explicit.txt`: explicit package export when available for exact environment reconstruction.
 - `experiments/reports/environment_report.md`: conda environment name, creation commands, Python/CUDA/PyTorch versions, installed packages, and activation instructions.
+- `experiments/reports/baseline_selection.md`: recent two-year peer baseline, at least two classic baselines when feasible, source papers, repositories, weights, and rejection reasons.
 - `datasets/manifests/<dataset_name>_archive_manifest.csv`: archive path, extraction target, extracted files, checksum if available, and extraction errors.
 - `datasets/manifests/<dataset_name>_preprocess_log.jsonl`: structured event log for extraction, split generation, label conversion, filtering, deletion, and retention.
 - `datasets/manifests/<dataset_name>_label_audit.csv`: invalid labels, empty labels, corrected labels, dropped labels, and reasons.
@@ -117,8 +123,10 @@ Maintain these records:
 - `experiments/reports/hardware_budget.md`: GPU/VRAM, CPU/RAM, disk, allowed batch/image/model settings, and memory safety margin.
 - `experiments/results/curves/`: raw curve data used for training/validation plots.
 - `experiments/results/tables/`: raw tabular data used for ablation, efficiency, class-wise, error-analysis, and dataset-statistic plots.
+- `experiments/results/raw_archive/`: packaged raw experimental evidence, manifest, and checksums for logs, metrics, configs, curves, tables, and figure data.
 - `experiments/figure_scripts/`: plotting scripts that regenerate experimental result figures.
 - `experiments/figures/`: exported experimental result figures, grouped by plot type.
+- `experiments/reports/final_work_record.md`: final work record summarizing actions, commands, artifacts, accepted/rejected ideas, blockers, and next maintenance steps.
 - `paper/shared/claim_evidence_matrix.md`: each manuscript claim mapped to evidence files, result ids, figures, tables, or citations.
 - `paper/shared/word_format_checklist.md`: DOCX body, heading, table, table-explanation, layout, terminology, and final QA requirements.
 - `paper/shared/terminology.md`: Chinese term, English term, abbreviation, first-use rule.
@@ -186,6 +194,9 @@ Rules:
 - Do not install packages globally or into an unrelated shared environment.
 - Keep all training, evaluation, preprocessing, and paper-generation commands inside the project environment.
 - If a baseline repository recommends its own environment, merge the needed dependencies into the project environment unless isolation is impossible. If separate environments are unavoidable, document why and keep experiment comparisons reproducible.
+- Prefer stable, compatible dependency versions over newest releases. Pin major packages such as Python, CUDA toolkit, PyTorch/TensorFlow, torchvision, mmcv, ultralytics, or similar framework packages.
+- WSL may be used when it improves CUDA, build, or Linux tooling compatibility. If used, document the WSL distribution, CUDA visibility, mounted paths, and where artifacts are stored.
+- Proxy, VPN, conda mirrors, or pip mirrors may be used to speed package and dataset downloads when available. Record the mirror/proxy choice, but do not hard-code private credentials into scripts, logs, or committed files.
 
 Record:
 
@@ -215,6 +226,7 @@ For each candidate public dataset:
 3. Record license, citation, download size, annotation format, class definitions, train/val/test protocol, and any usage restrictions.
 4. Select at least two datasets with complementary value, such as main benchmark plus cross-domain validation, or easy/standard dataset plus difficult/small-object/low-light/occlusion dataset.
 5. If no suitable public dataset is fully downloadable, present the nearest valid alternatives and explain the access blocker.
+6. If a selected dataset is public but requires manual download, create `datasets/raw/<dataset_name>/manual_download_required.md` with the official URL, expected archive names, checksums if known, license/citation requirements, and the exact folder where the user should place the files.
 
 Before preprocessing, create a dataset decision note explaining why the selected datasets are suitable and how they support the paper's experimental claims.
 
@@ -254,7 +266,7 @@ Record:
 - GPU model and dedicated VRAM, such as RTX 4090 with 24 GB VRAM when that is the available card.
 - CPU model, system RAM, disk free space, CUDA/cuDNN/PyTorch or framework versions.
 - Maximum allowed image size, common batch size, common epoch count, workers, precision, gradient accumulation, and model scale.
-- A safety margin below dedicated VRAM. For a 24 GB card, target memory usage should stay below about 22 GB unless the user explicitly approves otherwise.
+- A safety margin below dedicated VRAM. For an RTX 4090 with 24 GB VRAM, use 23 GB as a hard upper bound and target about 22 GB or lower for stable long runs unless the user explicitly approves a different cap.
 
 Rules:
 
@@ -272,11 +284,14 @@ Search for baselines from the target task's recent literature and widely used op
 
 Baseline selection rules:
 
-- Include one primary baseline that is easy to reproduce and strong enough to be credible.
-- Include additional comparison baselines when feasible, especially classic, lightweight, real-time, or state-of-the-art families relevant to the paper.
+- Include one primary peer baseline from the most recent two years when a credible paper, implementation, and reproducible weights/configs exist. Use the current date when judging the two-year window.
+- Include at least two additional classic baselines when feasible, especially widely cited, lightweight, real-time, or standard benchmark families relevant to the paper.
+- Include additional recent comparison baselines when feasible, especially state-of-the-art or strong open-source methods from the target task.
 - Prefer official repositories, released pretrained weights, maintained packages, and models with published metrics on the selected datasets.
 - Record model version, repository URL, commit/tag, weight URL, license, expected input size, parameters, FLOPs, FPS/latency, and published metrics.
 - Download pretrained weights automatically when public. Keep weights under `model_code/weights/` and record their source.
+- Write `experiments/reports/baseline_selection.md` explaining why each baseline was selected, which candidates were rejected, and whether the primary baseline satisfies the recent-two-year requirement.
+- If no recent-two-year baseline is reproducible or publicly available, document the search attempts and select the strongest recent reproducible alternative rather than inventing availability.
 
 Reproduce the primary baseline before adding innovations. If reproduced metrics are far from published or expected values, debug data processing, evaluation protocol, image size, training schedule, and dependency versions before claiming a new method.
 
@@ -348,6 +363,8 @@ Define at least three accepted method versions: `M1`, `M2`, and `M3`. `M0` is al
 - A risk note explaining how it could fail.
 - A measurable acceptance criterion.
 
+Design and accept versions one at a time. Do not finalize `M2` before `M1` has improved over `M0`, and do not finalize `M3` before `M2` has improved over `M1`. If the next version fails to improve, diagnose it, revise/replace/refine/remove/re-parameterize the failing mechanism, and only then rerun that stage.
+
 Good innovation categories include architecture modules, feature fusion, attention, loss functions, label assignment, data augmentation, temporal modeling, lightweight deployment changes, domain adaptation, post-processing, or training strategy. Avoid cosmetic changes that cannot be isolated experimentally.
 
 Design `M1`, `M2`, and `M3` with enough breadth to avoid getting stuck in one narrow direction. It is acceptable to build modules, replace modules, refine modules, remove harmful parts, or combine complementary modules when the evidence supports doing so. What is not acceptable is blind stacking: adding modules only because they sound useful, without a targeted problem, interface explanation, cost analysis, and validation.
@@ -389,7 +406,7 @@ For each step:
 2. Evaluate on every selected dataset or use one dataset for screening and another for final validation if compute is limited.
 3. Record metrics, training curves, confusion/error analysis, qualitative examples, speed, parameters, FLOPs, and hardware.
 4. Compare against the immediately previous accepted model and the original baseline.
-5. Accept the method version only if the primary metric improves meaningfully, a diagnosed failure mode is fixed, or an efficiency objective improves with acceptable trade-offs.
+5. Accept the method version only if it improves the declared primary objective over the immediately previous accepted version. For accuracy-oriented papers, `M1` must outperform `M0`, `M2` must outperform `M1`, and `M3` should be the best model on the primary metric; if a diagnosed subset improves but the primary metric drops, keep it as diagnostic evidence rather than a final innovation unless the user explicitly approves the trade-off.
 6. After accepting each method version, update `experiments/reports/innovation_story.md`, `experiments/state/project_state.json`, and `experiments/state/experiment_registry.yaml` so the rationale and measured evidence stay aligned.
 7. Keep every run within the documented hardware budget. Configuration changes made to fit VRAM must be applied consistently to baseline and improved methods.
 8. Record `epochs`, `batch size`, `num_workers`, precision, gradient accumulation, and measured throughput for each run. `num_workers` may be tuned for throughput, but `epochs` and `batch size` must remain fixed across model experiments.
@@ -407,7 +424,8 @@ If an innovation does not improve:
 - Do not hide it. Log it as rejected or under revision.
 - Diagnose likely causes using loss curves, class-wise metrics, object-size metrics, qualitative errors, and overfitting/underfitting signals.
 - Revise the idea, replace it with a better candidate, remove the harmful part, or re-parameterize the mechanism, then rerun the affected step.
-- Continue until there are three accepted innovations or until compute/data constraints make that impossible. If impossible, document the constraint and keep the strongest validated subset.
+- Do not move to the next accepted version until the current stage has a verified improvement over the previous accepted version.
+- Continue until there are three accepted innovations with a monotonic primary-metric sequence or until compute/data constraints make that impossible. If impossible, document the constraint and keep the strongest validated subset.
 
 ## Phase 7: Ablation And Comparison
 
@@ -419,6 +437,7 @@ After the final improved method is accepted, run final ablations:
 - `M3` final accepted mechanism version.
 - Targeted diagnostic checks only when needed to explain a mechanism or module interaction. Do not present arbitrary permutations as the main paper story, but do run targeted interaction checks when mechanisms may help or interfere with each other.
 - Comparison against selected external baselines under the same evaluation protocol.
+- Include the reproduced primary recent baseline and at least two classic baselines when feasible; if a classic baseline cannot be run under the same protocol, explain whether the result is reproduced, re-evaluated, or cited only for context.
 - Cross-dataset validation on at least two public datasets.
 - Efficiency comparison: parameters, FLOPs, FPS/latency, memory when relevant.
 
@@ -440,6 +459,8 @@ Produce these artifacts before writing the paper:
 - Error analysis grouped by class, object size, scene type, occlusion, lighting, or other task-relevant factors.
 - Reproducibility checklist with environment, commands, seeds, configs, checkpoints, and hardware.
 - Claim-evidence matrix mapping each manuscript claim to supporting result files, tables, figures, logs, configs, checkpoints, or citations.
+- Raw experimental evidence package under `experiments/results/raw_archive/`, including logs, metrics, configs, curve/table data, plotting inputs, manifest, and checksums.
+- Final work record under `experiments/reports/final_work_record.md`, summarizing what was done, which artifacts were produced, which innovations were accepted/rejected, blockers, and exact next maintenance steps.
 
 Every number in every paper table must link back to `experiments/results/results.jsonl`, a training log, evaluation output, or a generated report.
 
@@ -543,7 +564,7 @@ Use these rules when the user asks for a Chinese SCI/EI-style small paper or ask
 
 - Drafting route: produce a Chinese draft first, revise the Chinese manuscript against the user's structural and formatting requirements, then polish or translate. Do not jump directly to an English manuscript when the user asks for a Chinese first version.
 - Template matching: if the user provides a sample Word document, inspect its fonts, heading levels, caption style, paragraph spacing, table style, reference style, and page layout before generating the new manuscript. Match the sample unless the user gives a newer explicit formatting rule.
-- Title pattern: use “一种基于……的……方法” when the paper is method-oriented. The title must name the core mechanism and the target task directly.
+- Title pattern: use “一种基于……的……模型/方法” when the paper is method-oriented. The title must name the core mechanism and the target task directly.
 - Abstract: target about 400 Chinese characters. Sentence 1 states the research meaning. Sentence 2 states the concrete problem and “本文提出了一种基于……的……方法”. Then state implementation, measured effect, and significance. Do not include detailed hardware model names, formula symbols, inequalities, or over-specific abbreviations in the abstract.
 - Keywords: use five keywords ordered from broad background to specific technology.
 - Introduction: write research meaning, current methods, research gaps that this paper actually addresses, this paper’s work, and manuscript structure. Citations should be distributed across the first two paragraphs, cited one by one, and should not be reused later in Related Work unless unavoidable.
@@ -551,18 +572,18 @@ Use these rules when the user asks for a Chinese SCI/EI-style small paper or ask
 - Claims: use declarative academic prose. Do not advertise, overstate novelty, claim state-of-the-art without evidence, use emotional adjectives, use story-like phrasing, use unnecessary quotation marks, or raise gaps that the method/experiments do not address.
 - Methods: explain the system top-down from input to output. Define variables once, keep notation consistent across equations, tables, figures, and text, and provide formulas for model outputs, fusion, gating, and decision rules when applicable.
 - Experiments: every table/figure needs one analysis paragraph. Include ablation, efficiency, and failure/degradation analysis when supported by logs. Do not fabricate experiments; if an experiment cannot be added, state the limitation.
-- Body formatting: body Chinese font is Songti/宋体, English text, numbers, variables, model names, and identifiers use Times New Roman, font size is 小四, color is default black, paragraphs use first-line indent of 2 Chinese characters, justified alignment, and fixed line spacing of 22 pt. Keep the academic style concise and clear; avoid overly colloquial expressions.
+- Body formatting: body Chinese font is Songti/宋体, English text, numbers, variables, model names, and identifiers use Times New Roman, font size is 小四, color is default black, paragraphs use first-line indent of 2 Chinese characters, justified alignment, and fixed line spacing of 22 pt. Keep the academic style concise and clear; avoid overly colloquial expressions. Use Chinese double quotation marks “ ” for Chinese prose, and prevent a closing or opening quotation mark from becoming the first visible character of a line when final layout is adjusted.
 - Title and navigation formatting: the document title uses Songti/宋体 四号 bold, default black, centered, and no first-line indent. First-level headings use Songti/宋体 四号 bold and no first-line indent. Apply Word built-in `Heading 1`, `Heading 2`, and `Heading 3` styles to first-, second-, and third-level headings so the left Word navigation pane shows an interactive outline.
-- Tables: every table must have an independent title above the table. Table titles are centered and use 五号. Use three-line tables. Center cell content horizontally and vertically, remove paragraph indents inside cells, keep Chinese table text in Songti/宋体, English/numbers/model names in Times New Roman, use 五号 for all table text, and set table line spacing to single. Keep decimal places consistent by applying one decimal-place rule per metric column, and adjust widths so cells do not break into one- or two-character lines. Avoid page breaks inside tables when possible; if a table is long, split it, add a continuation table, or adjust row height/column width. Shorten field names or split large tables when the page becomes crowded. Any variable, metric symbol, subscript, superscript, Greek letter, or formula-like expression inside a table must be inserted as a Word/MathType-compatible equation object, not typed as plain text.
+- Tables: every table must have an independent title above the table. Table titles are centered and use 五号. Use three-line tables. Center cell content horizontally and vertically, remove paragraph indents inside cells, keep Chinese table text in Songti/宋体, English/numbers/model names in Times New Roman, use 五号 for all table text, and set table line spacing to single. Keep decimal places consistent by applying one decimal-place rule per metric column, and adjust widths so cells do not break into one- or two-character lines. Avoid page breaks inside tables when possible; if a table is long, split it, add a continuation table, or adjust row height/column width. Shorten field names or split large tables when the page becomes crowded. Do not compress table text shapes or enable “fit text”; keep Chinese, English, numbers, variables, and model names visually consistent. Formula-like expressions in tables should remain as `$...$` LaTeX text under this skill's DOCX formula policy.
 - Table explanations: every table must be followed by one concise explanatory paragraph using body formatting: Songti/宋体 小四 for Chinese, Times New Roman 小四 for English/numbers, first-line indent of 2 Chinese characters, justified alignment, and fixed line spacing of 22 pt. The paragraph should explain the table's role, field meanings, and where it fits in the research content. When useful, include one concrete example, but keep the paragraph short enough for report-style presentation.
-- Figures: draw manuscript diagrams as PPT sketches or editable PPT source first, then export images at 600 dpi or higher and insert the exported images into Word; keep the PPT source with the manuscript package for later editing. Use differentiated colors/shapes, orthogonal arrows, no arrow-through-text, no overlapping lines, no text overflow, and figure text large enough to remain readable after Word insertion and PDF export. If a specialized diagram tool or skill is available, consider it for deep-learning/model architecture diagrams. Variables and formulas in PPT diagrams should use MathType/Office equation objects before export whenever feasible.
-- Equations: use Word/MathType-compatible equation objects when generating DOCX. This applies to display equations, inline variables in body text, table cells, figure labels, and captions when they contain formula symbols. Put display equation numbers on the right, use single line spacing around equations, captions, and figure/table labels when needed for complete display, and verify in exported PDF that subscripts and symbols are complete. Audit physiological variable notation and subscripts explicitly; for peripheral blood oxygen saturation, use `SpO_2` or `\mathrm{SpO}_2` consistently, not `SPO2`, `Sp02`, or mixed forms.
+- Figures: draw manuscript diagrams as PPT sketches or editable PPT source first, then export images at 600 dpi or higher and insert the exported images into Word; keep the PPT source with the manuscript package for later editing. Use differentiated colors/shapes, orthogonal arrows, no arrow-through-text, no overlapping lines, no text overflow, and figure text large enough to remain readable after Word insertion and PDF export. If a specialized diagram tool or skill is available, consider it for deep-learning/model architecture diagrams. Variables and formula-like labels should follow the same notation as the manuscript and avoid unreadable tiny text.
+- Equations: keep every inline and display formula visible as `$...$` LaTeX text in DOCX. Do not generate Word OMML equation objects, do not use Word's built-in equation editor, and verify that the DOCX package contains no `<m:oMath>` or `<m:oMathPara>` tags. MathType conversion is performed later by the user's workflow. Put display equation numbers on the right when needed, use single line spacing around formulas if PDF export clips subscripts or symbols, and keep notation consistent.
 - Word layout: captions and references use 五号 unless a template says otherwise. First-level headings such as 引言、相关工作、方法与材料、实验分析、结论、参考文献 should have no first-line indent; second-level headings such as 3.1 and 4.1 should also have no indent. Keep each figure with its caption on the same page and each table title, table, and table explanation together when feasible by using keep-with-next/page-break controls. Leave appropriate spacing between tables; avoid stacking tables continuously without explanatory text. If a table must span pages, use continuation-table wording rather than separating the caption from the table. Do not insert spaces between adjacent Chinese and English/numeric terms in body text unless required by the target journal or a style guide.
 - Terminology and conceptual boundaries: keep important concept names exactly consistent throughout the document. If the project includes terms such as “学生个人私有知识库”, “课堂行为倾向”, “知识生成适应性引擎”, “多源异构特征对齐”, or “动态匹配机制”, do not paraphrase them casually. Keep conceptual boundaries explicit: for example, a student personal/private knowledge base does not include classroom behavior; classroom behavior tendency is a separate behavior-side feature; the two are fused only in the knowledge-generation adaptive engine stage. For other domains, create the same kind of boundary notes for easily confused concepts.
-- Citations and references: cite in order without skipped numbers; avoid ranges longer than three references, and prefer individual citations. Use superscript citation markers linked to the reference list. In DOCX, references must use real Word automatic numbering, not hand-typed `[1]` text. Add bookmarks or equivalent anchors on numbered reference items so each in-text citation can jump to the corresponding reference. Target 30 references when the user requests a standard small-paper reference set. Verify every reference against Crossref, publisher pages, or PDFs, and ensure titles match publisher/PDF metadata rather than AI-generated variants. Prefer recent five-year journal papers, CAS Q2 or above when feasible, fewer OA/MDPI/conference references, GB/T 7714 style, no DOI in the final reference list, page range or article number when available, hanging indent of two Chinese characters, justified alignment, and reference paragraph line spacing set to exactly 20 pt. Download legally available PDFs when possible and produce a manifest for unavailable or access-restricted PDFs.
-- Revision loop: after the first complete draft, simulate at least three reviewers with at least three comments each, including content, experiment, and formatting issues. Revise according to feasible comments. Add experiments only when existing data/logs support them; otherwise state why the experiment cannot be added.
+- Citations and references: cite in order without skipped numbers; avoid ranges longer than three references, and prefer individual citations. Use superscript citation markers linked to the reference list. In DOCX, references must use real Word automatic numbering, not hand-typed `[1]` text. Add bookmarks or equivalent anchors on numbered reference items so each in-text citation can jump to the corresponding reference. Target 30 references when the user requests a standard small-paper reference set. Verify every reference against Crossref, publisher pages, or PDFs, and ensure titles match publisher/PDF metadata rather than AI-generated variants. Prefer recent five-year journal papers, CAS Q2 or above when feasible, fewer OA/MDPI/conference references, GB/T 7714 style, no DOI in the final reference list, page range or article number when available, hanging indent of two Chinese characters, justified alignment, and reference paragraph line spacing set to exactly 22 pt. Download legally available PDFs when possible and produce a manifest for unavailable or access-restricted PDFs.
+- Revision loop: after the first complete draft, act as a journal reviewer and give exactly three substantive review comments covering content, experiment, writing, citation, or formatting issues. Revise according to feasible comments. Add experiments only when existing data/logs support them; otherwise state why the experiment cannot be added.
 - File hygiene: after producing the final package, remove temporary lock files and clearly obsolete drafts, or move old versions into an archive folder. Do not delete source data, verified references, scripts, or user-provided files.
-- Final QA: export DOCX to PDF, render or visually inspect pages, and check body fixed 22 pt line spacing, 2-character first-line indent, built-in Word heading styles and navigation-pane outline, title formatting, table titles above tables, table three-line style, table text 五号, table single-line spacing, table explanation paragraphs after every table, table continuation handling, duplicate numbering, table layout, decimal-place consistency, figure/caption and table/title/explanation same-page placement, figure text readability, equation completeness, variable subscripts, reference 20 pt line spacing, reference numbering, citation jump links, terminology consistency, conceptual boundary statements, typos, and Chinese-English spacing. For DOCX structure, verify that formula-like content is stored as equation objects, reference entries are real numbered-list paragraphs, manual reference-number paragraphs are absent, citation anchors resolve to reference bookmarks, and exported PDF retains link annotations when citation jumps are required. Check that title numbering, figure numbering, table numbering, and reference numbering are not duplicated. After QA, report any remaining limits such as inaccessible reference PDFs or experiments that could not be added from existing data.
+- Final QA: export DOCX to PDF, render or visually inspect pages, and check body fixed 22 pt line spacing, 2-character first-line indent, built-in Word heading styles and navigation-pane outline, title formatting, Chinese double quotation marks and line-start punctuation, table titles above tables, table three-line style, table text 五号, table single-line spacing, table text not compressed, table explanation paragraphs after every table, table continuation handling, duplicate numbering, table layout, decimal-place consistency, figure/caption and table/title/explanation same-page placement, figure text readability, `$...$` formula visibility, variable subscripts, reference 22 pt line spacing, reference numbering, citation jump links, terminology consistency, conceptual boundary statements, typos, and Chinese-English spacing. For DOCX structure, verify that no OMML formula tags are present, formula-like content remains `$...$` LaTeX text, reference entries are real numbered-list paragraphs, manual reference-number paragraphs are absent, citation anchors resolve to reference bookmarks, and exported PDF retains link annotations when citation jumps are required. Check that title numbering, figure numbering, table numbering, and reference numbering are not duplicated. After QA, report any remaining limits such as inaccessible reference PDFs or experiments that could not be added from existing data.
 
 ## Phase 10: English Manuscript Draft
 
@@ -599,16 +620,20 @@ Do not report the work as complete until these are true:
 - Epoch count and batch size are identical across all accepted model experiments; any batch-size reduction was applied to every compared method.
 - `num_workers` is tuned within the local hardware budget and recorded for each run.
 - The primary baseline is reproduced or the reproduction gap is explained and fixed as far as possible.
+- The primary peer baseline satisfies the recent-two-year requirement when possible, and at least two classic baselines were run or their infeasibility was documented.
 - Improvement directions were analyzed, scored, screened when feasible, and documented before final innovation design.
 - At least three innovations were attempted, with accepted/rejected status recorded.
 - `M0`, `M1`, `M2`, and `M3` experiments are logged.
 - Only validated improvements appear as final innovations.
+- The accepted `M0 -> M1 -> M2 -> M3` sequence is monotonic on the declared primary objective, or any user-approved trade-off is explicitly documented.
 - Every final innovation has a documented problem, evidence, rationale, mechanism, and measured effect.
 - `M1/M2/M3` are evidence-backed mechanism or module improvements with a coherent relationship, not arbitrary modules that were simply stacked or permuted.
 - Each accepted version records whether it adds, replaces, refines, removes, or re-parameterizes an internal mechanism.
 - The final `M0 -> M1 -> M2 -> M3` story can be explained in the introduction, method, and ablation sections, whether the story is progressive, modular-complementary, replacement/refinement-based, or hybrid.
 - `experiments/reports/consistency_report.md` verifies shared epochs, batch size, data split, input size, evaluation script, seed policy, and hardware-relevant settings.
 - Final results are traceable to logs/configs/checkpoints.
+- Raw experimental evidence has been packaged under `experiments/results/raw_archive/` with a manifest and checksums.
+- `experiments/reports/final_work_record.md` summarizes work performed, commands/artifacts, accepted/rejected innovations, blockers, and next steps.
 - `paper/shared/claim_evidence_matrix.md` links major Chinese and English manuscript claims to evidence.
 - Chinese draft exists before English draft.
 - When a DOCX/Word manuscript is produced, `paper/shared/word_format_checklist.md` is completed or the same checks are reported, including body, heading/navigation, table, table-explanation, layout, and terminology requirements.
